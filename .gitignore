@@ -1,3 +1,5 @@
 notes.txt
 backend/layers
 backend/output
+backend/randomizer.py
+backend/__pycache__
