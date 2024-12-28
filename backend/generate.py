@@ -12,7 +12,7 @@ directories = {
     "06_Base": "./layers/06_Base/",
     "07_ToeGuards": "./layers/07_ToeGuards/",
     "08_Hats": "./layers/08_Hats/",
-    "09_Eyewears": "./layers/09_Eyewears/"
+    "09_Eyewear": "./layers/09_Eyewear/"
 }
 
 # Function to load rarities based on period
@@ -38,5 +38,9 @@ def generate_images(seeds, output_dir):
         generate_image(data["period"], data["seed"], output_dir)
 
 # Example usage
-seeds = [{"period":1,"seed":"ha8dh83h9o3jqe83ht874g8yt"}]
-generate_images(seeds,"./output")
+# seeds = [{"period":1,"seed":"ojfeu9hff98hfu9wh"},{"period":1,"seed":"ha8dh83h9o3jqe83ht874g8yt"},{"period":1,"seed":"fiwj398fwjh98fhw98hg9huousdh"}]
+# generate_images(seeds,"./output")
+i = 0
+while i < 100:
+    generate_image(1,i,"./output")
+    i += 1
