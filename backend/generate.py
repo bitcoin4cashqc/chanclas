@@ -22,35 +22,21 @@ def load_rarities(period):
 
 
 # Function to generate a single image
-def generate_image(period, nft_seed, output_dir):
+def generate_image(token_id, period, nft_seed, output_dir):
     rarity = load_rarities(period)
-    base_image, metadata = randomizing(nft_seed, rarity, directories)
+    base_image, metadata = randomizing(token_id, nft_seed, rarity, directories)
 
     # Save the final image
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    output_path = os.path.join(output_dir, f"{nft_seed}.png")
+    output_path = os.path.join(output_dir, f"{token_id}.png")
     base_image.save(output_path)
     print(f"Generated image for token {nft_seed}: {output_path}")
 
     # Save metadata as JSON
-    metadata_output = os.path.join(output_dir, f"{nft_seed}.json")
+    metadata_output = os.path.join(output_dir, f"{token_id}.json")
     with open(metadata_output, "w") as f:
         json.dump(metadata, f, indent=4)
     print(f"Metadata saved for token {nft_seed}: {metadata_output}")
 
     return output_path, metadata_output
-
-# Generate multiple images
-def generate_images(seeds, output_dir):
-    for data in seeds:
-        generate_image(data["period"], data["seed"], output_dir)
-
-# Example usage
-# seeds = [{"period":1,"seed":"ojfeu9hff98hfu9wh"},{"period":1,"seed":"ha8dh83h9o3jqe83ht874g8yt"},{"period":1,"seed":"fiwj398fwjh98fhw98hg9huousdh"}]
-# generate_images(seeds,"./output")
-# i = 0
-# while i < 100:
-#     generate_image(1,i,"./output")
-#     i += 1
-generate_image(1,0,"./output")
