@@ -1,2 +1,4 @@
 pillow 
 ipfshttpclient
+flask
+web3
