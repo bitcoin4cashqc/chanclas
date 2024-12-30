@@ -64,11 +64,12 @@ module.exports = {
     // tab if you use this network and you must also set the `host`, `port` and `network_id`
     // options below to some value.
     //
-    // development: {
-    //  host: "127.0.0.1",     // Localhost (default: none)
-    //  port: 8545,            // Standard Ethereum port (default: none)
-    //  network_id: "*",       // Any network (default: none)
-    // },
+     development: {
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 9545,            // Standard Ethereum port (default: none)
+      network_id: "*",       // Any network (default: none)
+       evmVersion: "cancun",
+     },
     //
     // An additional network, but with some advanced options…
     // advanced: {
@@ -113,7 +114,7 @@ module.exports = {
       //    enabled: false,
       //    runs: 200
       //  },
-      //  evmVersion: "byzantium"
+        evmVersion: "cancun"
       // }
     }
   },

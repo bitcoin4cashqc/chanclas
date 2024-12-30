@@ -5,7 +5,7 @@ import "../node_modules/openzeppelin/contracts/token/ERC721/extensions/ERC721URI
 import "../node_modules/openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "../node_modules/openzeppelin/contracts/access/AccessControl.sol";
 
-contract PeriodicNFT is ERC721, AccessControl {
+contract Chanclas is ERC721, AccessControl {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     uint256 public currentTokenId;
     string private baseTokenURI;
@@ -19,8 +19,9 @@ contract PeriodicNFT is ERC721, AccessControl {
     // Mapping from tokenId to TokenData
     mapping(uint256 => TokenData) private tokenData;
 
-    constructor(string memory name, string memory symbol, string memory initialBaseURI) ERC721(name, symbol) {
-        _setupRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant admin role to contract deployer
+    constructor(string memory name, string memory symbol, string memory initialBaseURI, address ico_minter) ERC721(name, symbol) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant admin role to contract deployer
+        _grantRole(MINTER_ROLE, ico_minter);
         baseTokenURI = initialBaseURI; // Set initial base URI
     }
 
@@ -44,7 +45,6 @@ contract PeriodicNFT is ERC721, AccessControl {
 
     // Get token data (periodId and seed)
     function getTokenData(uint256 tokenId) external view returns (uint256 seed, uint256 periodId) {
-        require(_exists(tokenId), "Token does not exist");
         TokenData memory data = tokenData[tokenId];
         return (data.seed, data.periodId);
     }
@@ -59,15 +59,7 @@ contract PeriodicNFT is ERC721, AccessControl {
         return baseTokenURI;
     }
 
-    // Utility to grant MINTER_ROLE to a specified address
-    function grantMinterRole(address minter) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        grantRole(MINTER_ROLE, minter);
-    }
 
-    // Utility to revoke MINTER_ROLE from a specified address
-    function revokeMinterRole(address minter) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        revokeRole(MINTER_ROLE, minter);
-    }
 
     // Override supportsInterface to resolve conflict between ERC721 and AccessControl
     function supportsInterface(bytes4 interfaceId) public view override(ERC721, AccessControl) returns (bool) {
