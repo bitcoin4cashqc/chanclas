@@ -45,6 +45,7 @@ contract Chanclas is ERC721, AccessControl {
 
     // Get token data (periodId and seed)
     function getTokenData(uint256 tokenId) external view returns (uint256 seed, uint256 periodId) {
+        require(_exists(tokenId), "Token does not exist");
         TokenData memory data = tokenData[tokenId];
         return (data.seed, data.periodId);
     }

@@ -4,3 +4,5 @@ backend/output
 backend/randomizer.py
 backend/__pycache__
 solidity/node_modules
+solidity/build
+.venv
