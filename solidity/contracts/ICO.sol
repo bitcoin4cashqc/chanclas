@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.20;
 
 import "../node_modules/openzeppelin/contracts/access/AccessControl.sol";
 import "../node_modules/openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -48,16 +48,12 @@ contract ChanclasICO is AccessControl {
     }
 
     function mint() external {
-        // Get the current period
+        // Lock the current period
         Period storage period = periods[currentPeriodId];
 
-        // Check if the current period is still active
-        if (block.timestamp > period.endTime || period.mintedCount >= period.maxSupply) {
-            // Move to the next period
-            require(currentPeriodId + 1 < periods.length, "No active periods left");
-            currentPeriodId++;
-            period = periods[currentPeriodId]; // Update to the new period
-        }
+        // Ensure the current period is valid
+        require(block.timestamp <= period.endTime, "Current period has ended");
+        require(period.mintedCount < period.maxSupply, "Current period max supply reached");
 
         // Transfer USDC from the buyer to the admin
         uint256 price = period.price;
@@ -69,8 +65,25 @@ contract ChanclasICO is AccessControl {
         // Update the period's minted count
         period.mintedCount++;
 
-        emit Minted(msg.sender, nftContract.currentTokenId(), currentPeriodId, price);
+        // Emit Minted event
+        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, price);
+
+        // Transition to the next period if this mint exhausts the current period
+        if (period.mintedCount == period.maxSupply) {
+            if (currentPeriodId + 1 < periods.length) {
+                currentPeriodId++;
+            }
+        }
+
+        // Revert if no more periods are available after the transition
+        if (currentPeriodId == periods.length) {
+            revert("No active periods left");
+        }
     }
+
+
+
+
 
     function getCurrentPeriod() external view returns (uint256 periodId, Period memory period) {
         // Return the current active period

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity ^0.8.20;
 
 import "../node_modules/openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "../node_modules/openzeppelin/contracts/token/ERC721/ERC721.sol";
@@ -27,7 +27,7 @@ contract Chanclas is ERC721, AccessControl {
 
     // Mint function with `periodId`
     function mint(address to, uint256 periodId) external onlyRole(MINTER_ROLE) {
-        currentTokenId++;
+        
         uint256 tokenId = currentTokenId;
 
         // Generate a unique seed using block.timestamp, periodId, and tokenId
@@ -39,13 +39,14 @@ contract Chanclas is ERC721, AccessControl {
         // Mint the token to the specified address
         _mint(to, tokenId);
 
+        currentTokenId++;
+
         // Emit an event for tracking
         emit Minted(to, tokenId, periodId, seed);
     }
 
     // Get token data (periodId and seed)
     function getTokenData(uint256 tokenId) external view returns (uint256 seed, uint256 periodId) {
-        require(_exists(tokenId), "Token does not exist");
         TokenData memory data = tokenData[tokenId];
         return (data.seed, data.periodId);
     }
