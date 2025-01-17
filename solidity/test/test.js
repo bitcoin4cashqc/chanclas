@@ -84,13 +84,10 @@ contract("ChanclasICO", (accounts) => {
             assert.fail("Minting should fail after all periods are exhausted");
         } catch (error) {
             const errorMessage = error.message.toLowerCase();
-            if (expectedTokenId <= 30) {
-                // Max supply reached for the current period
-                assert.include(errorMessage, "current period max supply reached", "Should fail due to max supply");
-            } else {
-                // All periods exhausted
-                assert.include(errorMessage, "no active periods left", "Should fail due to no active periods");
-            }
+            
+            // Max supply reached for the current period
+            assert.include(errorMessage, "current period max supply reached", "Should fail due to max supply");
+            
         }
     });
     

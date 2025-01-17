@@ -54,6 +54,7 @@ contract ChanclasICO is AccessControl {
         // Ensure the current period is valid
         require(block.timestamp <= period.endTime, "Current period has ended");
         require(period.mintedCount < period.maxSupply, "Current period max supply reached");
+        
 
         // Transfer USDC from the buyer to the admin
         uint256 price = period.price;
@@ -65,20 +66,19 @@ contract ChanclasICO is AccessControl {
         // Update the period's minted count
         period.mintedCount++;
 
-        // Emit Minted event
-        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, price);
-
-        // Transition to the next period if this mint exhausts the current period
+         // Transition to the next period if this mint exhausts the current period
         if (period.mintedCount == period.maxSupply) {
             if (currentPeriodId + 1 < periods.length) {
                 currentPeriodId++;
             }
         }
 
-        // Revert if no more periods are available after the transition
-        if (currentPeriodId == periods.length) {
-            revert("No active periods left");
-        }
+        
+
+        // Emit Minted event
+        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, price);
+
+       
     }
 
 
