@@ -48,7 +48,7 @@ def get_nft_metadata(token_id):
 
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
-            generate_image(token_id, period_id, seed, OUTPUT_DIR, "./output")
+            generate_image(token_id, period_id, seed, OUTPUT_DIR)
 
         # Return metadata
         with open(metadata_path, "r") as f:
@@ -73,7 +73,7 @@ def get_nft_image(token_id):
 
         # Generate image if missing
         if not os.path.exists(image_path):
-            generate_image(token_id, period_id, seed, OUTPUT_DIR, "./output")
+            generate_image(token_id, period_id, seed, OUTPUT_DIR,)
 
         return send_file(image_path, mimetype="image/png")
     except Exception as e:
