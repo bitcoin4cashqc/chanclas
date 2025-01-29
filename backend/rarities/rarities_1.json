@@ -19,7 +19,7 @@
     ],
 
     "02_Quad_UL": [
-        { "file": "01.-Rat.png", "weight": 4.1666666667 },
+        { "file": "01-Rat.png", "weight": 4.1666666667 },
         { "file": "02.-Ox.png", "weight": 4.1666666667 },
         { "file": "03.-Tiger.png", "weight": 4.1666666667 },
         { "file": "04.-Rabbit.png", "weight": 4.1666666667 },
@@ -31,7 +31,7 @@
         { "file": "10.-Black-Dragon.png", "weight": 4.1666666667 },
         { "file": "11.-Gold-Rat.png", "weight": 4.1666666667 },
         { "file": "12.-Gold-Ox.png", "weight": 4.1666666667 },
-        { "file": "13.-Gold-Tiger.png", "weight": 4.1666666667 },
+        { "file": "14.-Gold-Tiger.png", "weight": 4.1666666667 },
         { "file": "14.-Gold-Rabbit.png", "weight": 4.1666666667 },
         { "file": "15.-Gold-Dragon.png", "weight": 4.1666666667 },
         { "file": "16.-Silver-Rat.png", "weight": 4.1666666667 },

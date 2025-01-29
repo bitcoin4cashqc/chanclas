@@ -2,6 +2,8 @@ import os
 from randomizer import randomizing
 import json
 
+periods = [1]
+
 # Define paths to directories
 directories = {
     "01_Background": "./layers/01_Background/",
@@ -19,6 +21,25 @@ directories = {
 def load_rarities(period):
     with open(f"./rarities/rarities_{period}.json", "r") as f:
         return json.load(f)
+    
+# Function to verify if files exist
+def verify_files_exist(period):
+    rarities = load_rarities(period)
+    missing_files = {}
+
+    for layer, files in rarities.items():
+        if layer in directories:
+            layer_directory = directories[layer]
+            for file_info in files:
+                file_name = file_info["file"]
+                if file_name != "EMPTY":  # Skip "EMPTY" entries
+                    file_path = os.path.join(layer_directory, file_name)
+                    if not os.path.exists(file_path):
+                        if layer not in missing_files:
+                            missing_files[layer] = []
+                        missing_files[layer].append(file_name)
+
+    return missing_files
 
 
 # Function to generate a single image
@@ -40,3 +61,8 @@ def generate_image(token_id, period, nft_seed, output_dir):
     print(f"Metadata saved for token {nft_seed}: {metadata_output}")
 
     return output_path, metadata_output
+
+if __name__ == '__main__':
+    print("Helllo")
+    for period in periods:
+        print(verify_files_exist(period))
