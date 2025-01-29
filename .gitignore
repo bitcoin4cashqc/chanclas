@@ -1,7 +1,7 @@
 notes.txt
 backend/layers
 backend/output
-backend/randomizer.py
+backend/.env
 backend/__pycache__
 solidity/node_modules
 solidity/build
