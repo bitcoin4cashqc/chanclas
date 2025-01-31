@@ -6,23 +6,26 @@ import "../node_modules/openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./Chanclas.sol";
 
 contract ChanclasICO is AccessControl {
-    
     address public admin;
-
+   
     struct Period {
-        uint256 endTime;      // End time of the period
-        uint256 maxSupply;    // Maximum supply for this period
-        uint256 price;        // Price per NFT in USDC
-        uint256 mintedCount;  // Number of NFTs minted in this period
+        uint256 endTime;
+        uint256 maxSupply;
+        uint256 price;
+        uint256 mintedCount;
     }
 
-    uint256 public currentPeriodId;  // Index of the current period
-    Period[] public periods;         // Array of all periods
-
-    IERC20 public usdc;              // USDC token contract
-    Chanclas public nftContract;     // Chanclas NFT contract
+    uint256 public currentPeriodId;
+    Period[] public periods;
+    IERC20 public usdc;
+    Chanclas public nftContract;
+    
+    mapping(address => uint256) public mintedPerUser;
+    uint16 public bonusMintedCount = 2;
+    uint16 public bonusMintedPercent = 65;
 
     event Minted(address indexed buyer, uint256 indexed tokenId, uint256 periodId, uint256 price);
+    event PeriodAdded(uint256 periodId, uint256 endTime, uint256 maxSupply, uint256 price);
 
     constructor(
         address _admin,
@@ -30,72 +33,77 @@ contract ChanclasICO is AccessControl {
         address nftContractAddress,
         Period[] memory initialPeriods
     ) {
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-
         admin = _admin;
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
 
         usdc = IERC20(usdcAddress);
         nftContract = Chanclas(nftContractAddress);
 
-        // Initialize periods
         for (uint256 i = 0; i < initialPeriods.length; i++) {
             periods.push(initialPeriods[i]);
         }
 
-        // Set the first period as the active one
         require(periods.length > 0, "At least one period must be defined");
         currentPeriodId = 0;
     }
 
-    function mint() external {
-        // Lock the current period
-        Period storage period = periods[currentPeriodId];
-
-        // Ensure the current period is valid
-        require(block.timestamp <= period.endTime, "Current period has ended");
-        require(period.mintedCount < period.maxSupply, "Current period max supply reached");
-        
-
-        // Transfer USDC from the buyer to the admin
-        uint256 price = period.price;
-        require(usdc.transferFrom(msg.sender, admin, price), "USDC transfer failed");
-
-        // Mint the NFT
-        nftContract.mint(msg.sender, currentPeriodId);
-
-        // Update the period's minted count
-        period.mintedCount++;
-
-         // Transition to the next period if this mint exhausts the current period
-        if (period.mintedCount == period.maxSupply) {
-            if (currentPeriodId + 1 < periods.length) {
-                currentPeriodId++;
-            }
-        }
-
-        
-
-        // Emit Minted event
-        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, price);
-
-       
+    function changeBonus(uint16 _bonusMintedCount, uint16 _bonusMintedPercent) external external onlyRole(DEFAULT_ADMIN_ROLE){
+        bonusMintedCount = _bonusMintedCount;
+        bonusMintedPercent = _bonusMintedPercent;
     }
 
+    function addPeriod(
+        uint256 endTime,
+        uint256 maxSupply,
+        uint256 price
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        
+        periods.push(Period({
+            endTime: endTime,
+            maxSupply: maxSupply,
+            price: price,
+            mintedCount: 0
+        }));
+        Period storage period = periods[currentPeriodId];
+        if (period.mintedCount == period.maxSupply) {
+            currentPeriodId++;
+        }
+        
+        emit PeriodAdded(periods.length - 1, endTime, maxSupply, price);
+    }
 
+    function mint() external {
+        Period storage period = periods[currentPeriodId];
+        require(block.timestamp <= period.endTime, "Current period has ended");
+        require(period.mintedCount < period.maxSupply, "Current period max supply reached");
 
+        uint256 pricePerNFT = period.price;
+        if (mintedPerUser[msg.sender] >= bonusMintedCount) {
+            pricePerNFT = (pricePerNFT * bonusMintedPercent) / 100;
+        }
 
+        require(usdc.transferFrom(msg.sender, admin, pricePerNFT), "USDC transfer failed");
 
+        nftContract.mint(msg.sender, currentPeriodId);
+        period.mintedCount++;
+        mintedPerUser[msg.sender]++;
+
+        if (period.mintedCount == period.maxSupply && currentPeriodId + 1 < periods.length) {
+            currentPeriodId++;
+        }
+
+        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, pricePerNFT);
+    }
+
+    // Existing view functions remain the same
     function getCurrentPeriod() external view returns (uint256 periodId, Period memory period) {
-        // Return the current active period
         require(currentPeriodId < periods.length, "No active periods");
         Period memory activePeriod = periods[currentPeriodId];
 
-        // Check if the current period is still active
         if (block.timestamp <= activePeriod.endTime && activePeriod.mintedCount < activePeriod.maxSupply) {
             return (currentPeriodId, activePeriod);
         }
 
-        // Check if there's a next period
         if (currentPeriodId + 1 < periods.length) {
             return (currentPeriodId + 1, periods[currentPeriodId + 1]);
         }
