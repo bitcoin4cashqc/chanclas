@@ -47,7 +47,7 @@ contract ChanclasICO is AccessControl {
         currentPeriodId = 0;
     }
 
-    function changeBonus(uint16 _bonusMintedCount, uint16 _bonusMintedPercent) external external onlyRole(DEFAULT_ADMIN_ROLE){
+    function changeBonus(uint16 _bonusMintedCount, uint16 _bonusMintedPercent) external  onlyRole(DEFAULT_ADMIN_ROLE){
         bonusMintedCount = _bonusMintedCount;
         bonusMintedPercent = _bonusMintedPercent;
     }
