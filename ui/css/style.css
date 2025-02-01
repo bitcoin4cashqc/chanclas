@@ -3976,7 +3976,7 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
     overflow: hidden;
     box-sizing: border-box;
     border-radius: 20px;
-    background: url(../img/bg-img/counter-bg.png) no-repeat center bottom;
+    background: url(../red.jpg) no-repeat center bottom;
     background-size: cover;
     box-shadow: 0 10px 80px rgb(153 110 15 / 30%)
 }
