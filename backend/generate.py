@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
-periods = [1]
+periods = [0]
 
 # Define paths to directories
 directories = {

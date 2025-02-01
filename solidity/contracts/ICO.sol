@@ -20,9 +20,9 @@ contract ChanclasICO is AccessControl {
     IERC20 public usdc;
     Chanclas public nftContract;
     
-    mapping(address => uint256) public mintedPerUser;
-    uint16 public bonusMintedCount = 2;
-    uint16 public bonusMintedPercent = 65;
+    mapping(address => mapping(uint256 => uint256)) public mintedPerUser;
+    uint16 public maxRebate = 50;
+    uint16 public curveSteepness = 1;
 
     event Minted(address indexed buyer, uint256 indexed tokenId, uint256 periodId, uint256 price);
     event PeriodAdded(uint256 periodId, uint256 endTime, uint256 maxSupply, uint256 price);
@@ -47,9 +47,9 @@ contract ChanclasICO is AccessControl {
         currentPeriodId = 0;
     }
 
-    function changeBonus(uint16 _bonusMintedCount, uint16 _bonusMintedPercent) external  onlyRole(DEFAULT_ADMIN_ROLE){
-        bonusMintedCount = _bonusMintedCount;
-        bonusMintedPercent = _bonusMintedPercent;
+    function changeBonus(uint16 _maxRebate, uint16 _curveSteepness) external  onlyRole(DEFAULT_ADMIN_ROLE){
+        maxRebate = _maxRebate;
+        curveSteepness = _curveSteepness;
     }
 
     function addPeriod(
@@ -77,16 +77,17 @@ contract ChanclasICO is AccessControl {
         require(block.timestamp <= period.endTime, "Current period has ended");
         require(period.mintedCount < period.maxSupply, "Current period max supply reached");
 
-        uint256 pricePerNFT = period.price;
-        if (mintedPerUser[msg.sender] >= bonusMintedCount) {
-            pricePerNFT = (pricePerNFT * bonusMintedPercent) / 100;
-        }
+        uint256 userMints = mintedPerUser[msg.sender][currentPeriodId];
+        uint256 extraMints = userMints + 1; // Start counting from first mint
+        uint256 discount = (maxRebate * extraMints) / (extraMints + curveSteepness);
+
+        uint256 pricePerNFT = period.price * (100 - discount) / 100;
 
         require(usdc.transferFrom(msg.sender, admin, pricePerNFT), "USDC transfer failed");
 
         nftContract.mint(msg.sender, currentPeriodId);
         period.mintedCount++;
-        mintedPerUser[msg.sender]++;
+        mintedPerUser[msg.sender][currentPeriodId]++;
 
         if (period.mintedCount == period.maxSupply && currentPeriodId + 1 < periods.length) {
             currentPeriodId++;
@@ -95,7 +96,19 @@ contract ChanclasICO is AccessControl {
         emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, pricePerNFT);
     }
 
-    // Existing view functions remain the same
+    function getCurrentRebate() external view returns (uint256) {
+        Period storage period = periods[currentPeriodId];
+
+        uint256 userMints = mintedPerUser[msg.sender][currentPeriodId];
+        uint256 extraMints = userMints + 1; // Start counting from first mint
+        uint256 discount = (maxRebate * extraMints) / (extraMints + curveSteepness);
+
+        uint256 pricePerNFT = period.price * (100 - discount) / 100;
+        return pricePerNFT;
+
+    }
+
+
     function getCurrentPeriod() external view returns (uint256 periodId, Period memory period) {
         require(currentPeriodId < periods.length, "No active periods");
         Period memory activePeriod = periods[currentPeriodId];
