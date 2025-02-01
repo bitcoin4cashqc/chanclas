@@ -49,7 +49,7 @@ def verify_files_exist(period):
 
 
 
-def randomizing(token_id,nft_seed, rarity, directories):
+def randomizing(token_id,nft_seed, rarity, directories, test = None):
     
     # Retrieve the secret salt from the .env file
     secret_salt = os.getenv("NFT_SECRET_SALT", "default_salt_if_not_found")
@@ -66,8 +66,8 @@ def randomizing(token_id,nft_seed, rarity, directories):
     # Initialize metadata with general fields
     metadata = {
         "description": "Friendly Chanclas Creature that enjoys long walks on the beach.", 
-        "external_url": f"https://chanclas.io/{token_id}",
-        "image": f"https://chanclas.io/image/{token_id}",
+        "external_url": f"https://chanclas.fun/{token_id}",
+        "image": f"https://chanclas.fun/image/{token_id}",
         "name": f"Chanclas NFT #{token_id}",
         "attributes": []  # Attributes will be added later
     }
@@ -84,7 +84,10 @@ def randomizing(token_id,nft_seed, rarity, directories):
     for layer, options in rarity.items():
         formatted_layer = format_name(layer)  # Format layer name
         print("Layer:", formatted_layer)
-
+        if test is not None:
+            if layer == "01_Background" or layer == "02_Quad_UL" or layer == "03_Quad_UR" or layer == "04_Quad_DL" or layer == "05_Quad_DR":
+                continue
+        
         # Special handling for 06_Base and 07_ToeGuards
         if layer == "06_Base":
             choices = [item['file'] for item in options]
@@ -137,9 +140,9 @@ def randomizing(token_id,nft_seed, rarity, directories):
     return base_image, metadata
 
 # Function to generate a single image
-def generate_image(token_id, period, nft_seed, output_dir):
+def generate_image(token_id, period, nft_seed, output_dir,test = None):
     rarity = load_rarities(period)
-    base_image, metadata = randomizing(token_id, nft_seed, rarity, directories)
+    base_image, metadata = randomizing(token_id, nft_seed, rarity, directories, test)
 
     # Save the final image
     if not os.path.exists(output_dir):
@@ -160,3 +163,6 @@ if __name__ == '__main__':
     print("Helllo")
     for period in periods:
         print(verify_files_exist(period))
+    
+    for x in range(10):
+        generate_image(x, 0, "SamuelIsTheDev", "../ui/demo", True)
