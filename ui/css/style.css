@@ -995,14 +995,14 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
 }
 .hero-section.de-3{
     position: relative;
-    background: url(../img/bg-img/counter-bg.png) no-repeat center;
+    background: #dfba7b;
     background-size: cover;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 .hero-section.app{
-    background: url(../img/bg-img/about-bg.png) no-repeat center;
+    background: #dfba7b;
     background-size: cover;
 }
 
@@ -1148,10 +1148,10 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
     background-size: cover
 }
 .hero-content.pizza {
-    background: url(../img/bg-img/banner-bg.jpg) no-repeat right top;
+    background: #dfba7b;
 }
 .hero-section.fuel {
-    background: url(../img/bg-img/banner-bg.html) no-repeat right bottom;
+    background: #dfba7b;
     background-size: cover;
     padding-top: 60px;
     padding-bottom: 365px;
@@ -1995,15 +1995,15 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
     }
 }
 .dotted-bg{
-    background: url(../img/bg-img/banner1.jpg) no-repeat center;
+    background: #dfba7b;
     background-size: cover
 }
 .about-bg{
-    background: url(../img/bg-img/about-bg.png) no-repeat center;
+    background: #f1cd8f;
     background-size: cover
 }
 .counter-bg{
-    background: url(../img/bg-img/counter-bg.png) no-repeat center;
+    background: #dfba7b;
     background-size: cover
 }
 .wavy-border{
@@ -5536,7 +5536,7 @@ textarea:required {
 }
 .banner-bg{
     padding-top: 100px;
-    background: url(../img/bg-img/banner-bg.jpg) no-repeat;
+    background: #dfba7b;
     background-size: cover;
     position: relative;
     border-radius: 50px 50px 0 0;
@@ -5779,7 +5779,7 @@ body.light-version {
 }
 
 .light-version .dream-faq-area dt {
-    background: url(../img/bg-img/faq-bg.png) no-repeat center;
+    background: #dfba7b;
     background-size: cover;
     margin-top: 5px;
     color: #000;
