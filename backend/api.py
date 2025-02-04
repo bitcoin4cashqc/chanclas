@@ -11,7 +11,7 @@ OUTPUT_DIR = "./output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Web3 configuration
-RPC_URL = "http://127.0.0.1:9545/"  # Replace with your RPC URL
+RPC_URL = "https://mainnet.base.org/"  # Replace with your RPC URL
 CONTRACT_ADDRESS = "0x47C4A2F484681a624996137dD22d070611713d4C"  # Replace with your contract address
 
 # Load the contract ABI
@@ -32,7 +32,7 @@ def is_token_minted(token_id):
        
         return False
 
-@app.route("/<int:token_id>", methods=["GET"])
+@app.route("/id/<int:token_id>", methods=["GET"])
 def get_nft_metadata(token_id):
     try:
         # Check if the token is minted
@@ -82,4 +82,4 @@ def get_nft_image(token_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=3000)
+    app.run(debug=False, port=3000)
