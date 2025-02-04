@@ -19,9 +19,8 @@ contract Chanclas is ERC721, AccessControl {
     // Mapping from tokenId to TokenData
     mapping(uint256 => TokenData) private tokenData;
 
-    constructor(string memory name, string memory symbol, string memory initialBaseURI, address ico_minter) ERC721(name, symbol) {
+    constructor(string memory name, string memory symbol, string memory initialBaseURI) ERC721(name, symbol) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender); // Grant admin role to contract deployer
-        _grantRole(MINTER_ROLE, ico_minter);
         baseTokenURI = initialBaseURI; // Set initial base URI
     }
 

@@ -13,7 +13,7 @@ contract("ChanclasICO", (accounts) => {
         usdcToken = await MockERC20.new(web3.utils.toWei("1000000", "ether"), { from: user });
 
         // Deploy Chanclas NFT contract
-        chanclas = await Chanclas.new("Chanclas", "CHNCLS", "http://localhost:3000/", admin, { from: admin });
+        chanclas = await Chanclas.new("Chanclas", "CHNCLS", "http://localhost:3000/", { from: admin });
 
         // Define initial periods
         const initialPeriods = [
