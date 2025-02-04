@@ -961,7 +961,7 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
     .navbar-expand-lg.navbar-dark {background: rgb(241 225 153);}
     .navbar-collapse{
         padding-top: 20px;
-        background: rgb(215, 223, 239)
+        background: #f1e199;
     }
 }
 .navbar-white.shrink .navbar-brand,
