@@ -23,8 +23,15 @@ const projectId = '4a2aad5472b76afb2a498c7c9bb03197';
 
 // Example addresses
 const chanclas721 = "0x73e88cfC79be97f8FB706Aa8476066C87eEa4Fc0";
+const ico = "0x73e88cfC79be97f8FB706Aa8476066C87eEa4Fc0"
+const usdcbase = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 
 const backend_api = "https://chanclas.fun/";
+
+import { erc20Abi } from './erc20abi.js';
+import { ChanclasAbi } from './Chanclasabi.js';
+import { ICOAbi } from './ICOAbi.js';
+
 
 let account = null;
 
@@ -113,5 +120,11 @@ export {
   signNonce,
   backend_api,
   formatWeiToEth,
-  formatNumberWithCommas
+  formatNumberWithCommas,
+  erc20Abi,
+  ChanclasAbi,
+  ICOAbi,
+  usdcbase,
+  chanclas721,
+  ico,
 };

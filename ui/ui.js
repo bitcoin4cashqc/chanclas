@@ -5,14 +5,19 @@ const totalImages = 14; // Images from 0 to 10
 const imgElement = document.getElementById("randomChanclas");
 
 import {
-  openModal,
-  watchAccount,
-  setAccount,
-  getAccount,
-  signNonce,
-  formatNumberWithCommas,
-  formatWeiToEth,
-  backend_api,
+    web3modal,
+    openModal,
+    watchAccount,
+    setAccount,
+    getAccount,
+    readFromContract,
+    writeToContract,
+    signNonce,
+    backend_api,
+    formatWeiToEth,
+    formatNumberWithCommas,
+    erc20Abi,
+    usdcbase,
 } from './web3.js';
 
 let account;
@@ -38,7 +43,7 @@ function changeImage() {
 window.addEventListener("load", async () => {
     changeImage();
     setInterval(changeImage, 3000); // Change every 10 seconds
-    
+
     Array.from(connectButtons).forEach((btn) => {
       btn.addEventListener("click", () => {
         openModal();
