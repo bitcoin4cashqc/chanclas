@@ -1953,17 +1953,32 @@ nav{-webkit-transition: padding-top .3s,padding-bottom .3s;
 .moving-bg {
     position: relative;
     background: #f08a3c;
-    width: 160em;
+    width: 200%; /* Increased from 160em */
     padding: 14px 0;
     border-top: 4px solid #000;
     border-bottom: 4px solid #000;
-    visibility: inherit;
-    animation: cloudwash 15s linear infinite;
+    animation: cloudwash 20s linear infinite; /* Adjusted timing */
     overflow: hidden;
+    display: flex; /* Use flex for better control */
 }
-.marquee-block{
-    display: inline-block;
-    width: 19em;
+
+/* Add this for the marquee blocks */
+.marquee-block {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+    padding: 0 2rem;
+}
+
+/* Update your keyframes */
+@keyframes cloudwash {
+    0% {
+        transform: translateX(0%);
+    }
+    100% {
+        transform: translateX(-50%); /* Translate by half width */
+    }
 }
 .marquee-block p{
     display: inline-block;
