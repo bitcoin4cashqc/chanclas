@@ -567,9 +567,9 @@
 
 
 
+    <!-- Update the existing "early" section -->
     <section class="container" id="early">
-        <div class="section-heading text-center">
-                
+        <div class="section-heading text-center">                
             <div class="dream-dots justify-content-center wow fadeInUp" data-wow-delay="0.2s">
                 <span class="gradient-t green"><br></span>
             </div>
@@ -581,22 +581,39 @@
                 <div class="col-sm-12">
                     <div class="subscribe-wrapper">
                         <div class="section-heading text-center">
-                            <h2 class="wow fadeInUp" data-wow-delay="0.3s" style="visibility: visible; animation-delay: 0.3s; animation-name: fadeInUp;">EARLY BIRD CHANCLAS PROMO</h2>
-                            <p class="wow fadeInUp" data-wow-delay="0.4s" style="visibility: visible; animation-delay: 0.4s; animation-name: fadeInUp;">Ensure good fortune, happiness & a prosperity this new year
+                            <h2 class="wow fadeInUp" data-wow-delay="0.3s">EARLY BIRD CHANCLAS PROMO</h2>
+                            <p class="wow fadeInUp" data-wow-delay="0.4s">Ensure good fortune, happiness & prosperity this new year
                                 with our early bird discounts and higher chances to generate
-                                uncommon and rare NFTs. </p>
+                                uncommon and rare NFTs.</p>
                         </div>
                         <div class="service-text text-center">
+                            <!-- Mint Controls Container (Initially hidden) -->
+                            <div id="mintControls" style="display: none;">
+                                <div class="balance-info fadeInUp" data-wow-delay="0.4s">
+                                    <p style="color: #fff;">USDC Balance: <span id="usdcBalance">0</span></p>
+                                    <p style="color: #fff;">Approved USDC: <span id="usdcApproved">0</span></p>
+                                    <p style="color: #fff;">Current Price: <span id="currentPrice">0</span> USDC</p>
+                                    <p style="color: #fff;">Minted This Period: <span id="mintedAmount">0</span></p>
+                                </div>
+                                <div class="form-group fadeInUp" data-wow-delay="0.5s">
+                                    <input type="number" id="mintAmount" class="form-control" 
+                                        placeholder="Enter USDC amount" min="0" step="1">
+                                </div>
+                                <div class="button-group fadeInUp" data-wow-delay="0.6s">
+                                    <button class="btn copy-btn v2" id="approveBtn">Approve USDC</button>
+                                    <button class="btn copy-btn v2" id="mintBtn">Mint CHANCLAS</button>
+                                </div>
+                            </div>
                             
-                          
-                                <button class="btn copy-btn v2">Red Envelop Mint</button>
-                       
+                            <!-- Toggle Button -->
+                            <button class="btn copy-btn v2 open-mint-modal fadeInUp" data-wow-delay="0.5s">
+                                Red Envelop Mint
+                            </button>
                         </div>
                     </div>
                 </div>
-                
             </div>
-        </div>  
+        </div>
     </section>
 
     <!-- ##### Footer Area Start ##### -->
@@ -658,7 +675,7 @@
     <!-- script js -->
     <script src="js/script.js"></script>
     <script src="js/copy.js"></script>
-   
+
     <script type="module" src="ui.js"></script>
 
 </body>

@@ -70,6 +70,17 @@ function formatWeiToEth(wei) {
 }
 
 /**
+ * Converts Wei (BigInt or string) to Ether as a human-readable string.
+ * @param {BigInt|string} wei - The amount in Wei.
+ * @returns {string} - The equivalent value in Ether.
+ */
+function formatDecimalToUSD(amount) {
+  const weiBigInt = BigInt(amount); // Ensure it's a BigInt
+  const ether = (weiBigInt / BigInt(1e6)).toString(); // Convert to Ether
+  return ether;
+}
+
+/**
  * Formats a number with commas for better readability.
  * @param {string|number} number - The number to format.
  * @returns {string} - The formatted number with commas.
@@ -127,4 +138,5 @@ export {
   usdcbase,
   chanclas721,
   ico,
+  formatDecimalToUSD,
 };
