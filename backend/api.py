@@ -12,7 +12,7 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Web3 configuration
 RPC_URL = "https://mainnet.base.org/"  # Replace with your RPC URL
-CONTRACT_ADDRESS = "0x47C4A2F484681a624996137dD22d070611713d4C"  # Replace with your contract address
+CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Replace with your contract address
 
 # Load the contract ABI
 with open("Chanclas_ABI.json", "r") as f:
@@ -41,14 +41,14 @@ def get_nft_metadata(token_id):
 
         # Query the blockchain for token data
         token_data = contract.functions.getTokenData(token_id).call()
-        seed, period_id = token_data
+        seed, period_id, extraMints, curveSteepness, maxRebate = token_data
 
         # Metadata path
         metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
 
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
-            generate_image(token_id, period_id, seed, OUTPUT_DIR)
+            generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
 
         # Return metadata
         with open(metadata_path, "r") as f:
@@ -66,14 +66,14 @@ def get_nft_image(token_id):
 
         # Query the blockchain for token data
         token_data = contract.functions.getTokenData(token_id).call()
-        seed, period_id = token_data
+        seed, period_id, extraMints, curveSteepness, maxRebate = token_data
 
         # Image path
         image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
 
         # Generate image if missing
         if not os.path.exists(image_path):
-            generate_image(token_id, period_id, seed, OUTPUT_DIR,)
+            generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate ,OUTPUT_DIR)
 
         return send_file(image_path, mimetype="image/png")
     except Exception as e:

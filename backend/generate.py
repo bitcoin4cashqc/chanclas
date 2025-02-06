@@ -49,7 +49,7 @@ def verify_files_exist(period):
 
 
 
-def randomizing(token_id,nft_seed, rarity, directories, test = None):
+def randomizing(token_id,nft_seed, rarity,d, directories, test = None):
     
     # Retrieve the secret salt from the .env file
     secret_salt = os.getenv("NFT_SECRET_SALT", "default_salt_if_not_found")
@@ -66,7 +66,7 @@ def randomizing(token_id,nft_seed, rarity, directories, test = None):
     # Initialize metadata with general fields
     metadata = {
         "description": "Friendly Chanclas Creature that enjoys long walks on the beach.", 
-        "external_url": f"https://chanclas.fun/{token_id}",
+        "external_url": f"https://chanclas.fun/id/{token_id}",
         "image": f"https://chanclas.fun/image/{token_id}",
         "name": f"Chanclas NFT #{token_id}",
         "attributes": []  # Attributes will be added later
@@ -82,6 +82,20 @@ def randomizing(token_id,nft_seed, rarity, directories, test = None):
 
     # Select layers based on rarity and exclusions
     for layer, options in rarity.items():
+
+        # Adjust weights based on d
+        adjusted_options = []
+        for item in options:
+            original_weight = item['weight']
+            if original_weight <= 0:
+                adjusted_weight = 0.0
+            else:
+                adjusted_weight = original_weight ** (-d)
+            # Create a new item with adjusted weight
+            adjusted_item = item.copy()
+            adjusted_item['weight'] = adjusted_weight
+            adjusted_options.append(adjusted_item)
+        
         formatted_layer = format_name(layer)  # Format layer name
         print("Layer:", formatted_layer)
         if test is not None:
@@ -90,8 +104,8 @@ def randomizing(token_id,nft_seed, rarity, directories, test = None):
         
         # Special handling for 06_Base and 07_ToeGuards
         if layer == "06_Base":
-            choices = [item['file'] for item in options]
-            weights = [item['weight'] for item in options]
+            choices = [item['file'] for item in adjusted_options]
+            weights = [item['weight'] for item in adjusted_options]
             selected_base = random.choices(choices, weights=weights, k=1)[0]
             selected_layers[layer] = selected_base
             selected_layers["07_ToeGuards"] = selected_base  # Ensure matching ToeGuard
@@ -108,8 +122,8 @@ def randomizing(token_id,nft_seed, rarity, directories, test = None):
             continue
 
         # Regular layers
-        choices = [item['file'] for item in options]
-        weights = [item['weight'] for item in options]
+        choices = [item['file'] for item in adjusted_options]
+        weights = [item['weight'] for item in adjusted_options]
         selected = random.choices(choices, weights=weights, k=1)[0]
 
         # Handle EMPTY exclusions
@@ -140,9 +154,12 @@ def randomizing(token_id,nft_seed, rarity, directories, test = None):
     return base_image, metadata
 
 # Function to generate a single image
-def generate_image(token_id, period, nft_seed, output_dir,test = None):
+def generate_image(token_id, period, nft_seed, extraMints, curveSteepness, maxRebate, output_dir,test = None):
     rarity = load_rarities(period)
-    base_image, metadata = randomizing(token_id, nft_seed, rarity, directories, test)
+    discount = (maxRebate * extraMints) / (extraMints + curveSteepness)
+    d = discount / 100.0  # Convert to a decimal
+
+    base_image, metadata = randomizing(token_id, nft_seed, rarity, d, directories, test)
 
     # Save the final image
     if not os.path.exists(output_dir):
