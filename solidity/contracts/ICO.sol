@@ -85,15 +85,15 @@ contract ChanclasICO is AccessControl {
 
         require(usdc.transferFrom(msg.sender, admin, pricePerNFT), "USDC transfer failed");
 
-        nftContract.mint(msg.sender, currentPeriodId);
+        nftContract.mint(msg.sender,currentPeriodId,extraMints,curveSteepness,maxRebate);
         period.mintedCount++;
         mintedPerUser[msg.sender][currentPeriodId]++;
 
+
+        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, pricePerNFT);
         if (period.mintedCount == period.maxSupply && currentPeriodId + 1 < periods.length) {
             currentPeriodId++;
         }
-
-        emit Minted(msg.sender, nftContract.currentTokenId() - 1, currentPeriodId, pricePerNFT);
     }
 
     function getCurrentRebate() external view returns (uint256) {

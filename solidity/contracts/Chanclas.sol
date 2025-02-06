@@ -14,6 +14,9 @@ contract Chanclas is ERC721, AccessControl {
     struct TokenData {
         uint256 seed;
         uint256 periodId;
+        uint256 extraMints;
+        uint16 curveSteepness;
+        uint16 maxRebate;
     }
 
     // Mapping from tokenId to TokenData
@@ -25,15 +28,15 @@ contract Chanclas is ERC721, AccessControl {
     }
 
     // Mint function with `periodId`
-    function mint(address to, uint256 periodId) external onlyRole(MINTER_ROLE) {
+    function mint(address to, uint256 periodId,uint256 extraMints,uint16 curveSteepness,uint16 maxRebate) external onlyRole(MINTER_ROLE) {
         
         uint256 tokenId = currentTokenId;
 
         // Generate a unique seed using block.timestamp, periodId, and tokenId
-        uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, periodId, tokenId)));
+        uint256 seed = uint256(keccak256(abi.encodePacked(block.timestamp, periodId, tokenId, extraMints, curveSteepness, maxRebate)));
 
         // Store token data
-        tokenData[tokenId] = TokenData({ seed: seed, periodId: periodId });
+        tokenData[tokenId] = TokenData({ seed: seed, periodId: periodId, extraMints: extraMints, curveSteepness: curveSteepness, maxRebate: maxRebate});
 
         // Mint the token to the specified address
         _mint(to, tokenId);
