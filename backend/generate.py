@@ -176,10 +176,3 @@ def generate_image(token_id, period, nft_seed, extraMints, curveSteepness, maxRe
 
     return output_path, metadata_output
 
-if __name__ == '__main__':
-    print("Helllo")
-    for period in periods:
-        print(verify_files_exist(period))
-    
-    for x in range(10):
-        generate_image(x, 0, "SamuelIsTheDev", "../ui/demo", True)
