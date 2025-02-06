@@ -102,7 +102,7 @@ async function updateMintData() {
       functionName: 'balanceOf',
       args: [account]
     });
-    usdcBalanceSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(balance));
+    usdcBalanceSpan.textContent = formatDecimalToUSD(balance);
 
     // Get USDC allowance
     const allowance = await readFromContract({
@@ -111,24 +111,26 @@ async function updateMintData() {
       functionName: 'allowance',
       args: [account, ico]
     });
-    usdcApprovedSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(allowance));
+    usdcApprovedSpan.textContent = formatDecimalToUSD(allowance);
 
     // Get current price
     const price = await readFromContract({
       address: ico,
       abi: ICOAbi,
-      functionName: 'getCurrentRebate'
+      functionName: 'getCurrentRebate',
+      account: account, // ⚡️ Critical: Pass the user's address
     });
-    currentPriceSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(price));
+   
+    currentPriceSpan.textContent = formatDecimalToUSD(price);
 
-    // Get minted amount
-    const minted = await readFromContract({
-      address: ico,
-      abi: ICOAbi,
-      functionName: 'mintedPerUser',
-      args: [account]
-    });
-    mintedAmountSpan.textContent = formatNumberWithCommas(minted);
+    // // Get minted amount
+    // const minted = await readFromContract({
+    //   address: ico,
+    //   abi: ICOAbi,
+    //   functionName: 'mintedPerUser',
+    //   args: [account]
+    // });
+    // mintedAmountSpan.textContent = formatNumberWithCommas(minted);
 
   } catch (error) {
     console.error('Error updating mint data:', error);

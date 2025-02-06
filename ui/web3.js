@@ -48,8 +48,15 @@ const web3modal = new Web3Modal({ projectId }, ethereumClient);
 
 
 /** Contract read/write */
-async function readFromContract({ address, abi, functionName, args = [] }) {
-  return await readContract({ address, abi, functionName, args });
+async function readFromContract({ address, abi, functionName, args = [], account = null}) {
+  let data;
+  if (account == null) {
+    data = { address, abi, functionName, args}
+  }else{
+    data = { address, abi, functionName, args, account}
+  }
+  
+  return await readContract(data);
 }
 
 async function writeToContract({ address, abi, functionName, args = [], account }) {
@@ -75,10 +82,22 @@ function formatWeiToEth(wei) {
  * @returns {string} - The equivalent value in Ether.
  */
 function formatDecimalToUSD(amount) {
-  const weiBigInt = BigInt(amount); // Ensure it's a BigInt
-  const ether = (weiBigInt / BigInt(1e6)).toString(); // Convert to Ether
-  return ether;
+  
+  const usdcUnits = BigInt(amount);
+  const divisor = BigInt(1e6); // USDC has 6 decimals
+
+  const integerPart = usdcUnits / divisor;
+  const remainder = usdcUnits % divisor;
+
+  if (remainder === 0n) {
+    return integerPart.toString();
+  }
+
+  // Pad remainder to 6 digits and trim trailing zeros
+  const remainderStr = remainder.toString().padStart(6, '0').replace(/0+$/, '');
+  return `${integerPart.toString()}.${remainderStr}`;
 }
+
 
 /**
  * Formats a number with commas for better readability.
