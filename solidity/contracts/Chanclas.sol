@@ -48,9 +48,9 @@ contract Chanclas is ERC721, AccessControl {
     }
 
     // Get token data (periodId and seed)
-    function getTokenData(uint256 tokenId) external view returns (uint256 seed, uint256 periodId) {
+    function getTokenData(uint256 tokenId) external view returns (uint256 seed, uint256 periodId,uint256 extraMints,uint16 curveSteepness,uint16 maxRebate) {
         TokenData memory data = tokenData[tokenId];
-        return (data.seed, data.periodId);
+        return (data.seed, data.periodId,data.extraMints,data.curveSteepness,data.maxRebate);
     }
 
     // Set base token URI (only admin can set this)
