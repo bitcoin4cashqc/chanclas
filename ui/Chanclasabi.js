@@ -458,6 +458,21 @@ export const ChanclasAbi = [
 				"internalType": "uint256",
 				"name": "periodId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "extraMints",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint16",
+				"name": "curveSteepness",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "maxRebate",
+				"type": "uint16"
 			}
 		],
 		"stateMutability": "view",
@@ -540,6 +555,21 @@ export const ChanclasAbi = [
 				"internalType": "uint256",
 				"name": "periodId",
 				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "extraMints",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint16",
+				"name": "curveSteepness",
+				"type": "uint16"
+			},
+			{
+				"internalType": "uint16",
+				"name": "maxRebate",
+				"type": "uint16"
 			}
 		],
 		"name": "mint",

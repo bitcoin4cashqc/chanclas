@@ -29,6 +29,7 @@ let account;
 
 let connectButtons = document.getElementsByClassName("open-connect-modal");
 
+const navbar = document.getElementById("collapsibleNavbar");
 // Add these selectors at the top
 const mintControls = document.getElementById('mintControls');
 const openMintBtn = document.querySelector('.open-mint-modal');
@@ -61,6 +62,9 @@ window.addEventListener("load", async () => {
 
     Array.from(connectButtons).forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (navbar && navbar.classList.contains("show")) {
+          navbar.classList.remove("show");
+      }
         openModal();
       });
     });
@@ -100,31 +104,31 @@ async function updateMintData() {
     });
     usdcBalanceSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(balance));
 
-    // // Get USDC allowance
-    // const allowance = await readFromContract({
-    //   address: usdcbase,
-    //   abi: erc20Abi,
-    //   functionName: 'allowance',
-    //   args: [account, ico]
-    // });
-    // usdcApprovedSpan.textContent = formatNumberWithCommas(formatWeiToEth(allowance));
+    // Get USDC allowance
+    const allowance = await readFromContract({
+      address: usdcbase,
+      abi: erc20Abi,
+      functionName: 'allowance',
+      args: [account, ico]
+    });
+    usdcApprovedSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(allowance));
 
-    // // Get current price
-    // const price = await readFromContract({
-    //   address: ico,
-    //   abi: ICOAbi,
-    //   functionName: 'getCurrentRebate'
-    // });
-    // currentPriceSpan.textContent = formatNumberWithCommas(price);
+    // Get current price
+    const price = await readFromContract({
+      address: ico,
+      abi: ICOAbi,
+      functionName: 'getCurrentRebate'
+    });
+    currentPriceSpan.textContent = formatNumberWithCommas(formatDecimalToUSD(price));
 
-    // // Get minted amount
-    // const minted = await readFromContract({
-    //   address: ico,
-    //   abi: ICOAbi,
-    //   functionName: 'mintedPerPeriod',
-    //   args: [account]
-    // });
-    // mintedAmountSpan.textContent = formatNumberWithCommas(formatWeiToEth(minted));
+    // Get minted amount
+    const minted = await readFromContract({
+      address: ico,
+      abi: ICOAbi,
+      functionName: 'mintedPerPeriod',
+      args: [account]
+    });
+    mintedAmountSpan.textContent = formatNumberWithCommas(minted);
 
   } catch (error) {
     console.error('Error updating mint data:', error);
@@ -168,14 +172,13 @@ approveBtn.addEventListener('click', async () => {
 
 // Mint handler
 mintBtn.addEventListener('click', async () => {
-  const amount = BigInt(mintAmount.value * 1e6); // USDC has 6 decimals
   
   try {
     await writeToContract({
       address: ico,
       abi: ICOAbi,
       functionName: 'mint',
-      args: [amount],
+      args: [],
       account
     });
     await updateMintData();
