@@ -125,7 +125,7 @@ async function updateMintData() {
     const minted = await readFromContract({
       address: ico,
       abi: ICOAbi,
-      functionName: 'mintedPerPeriod',
+      functionName: 'mintedPerUser',
       args: [account]
     });
     mintedAmountSpan.textContent = formatNumberWithCommas(minted);
