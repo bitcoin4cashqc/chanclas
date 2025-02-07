@@ -145,11 +145,13 @@ def randomizing(token_id,nft_seed, rarity,d, directories, test = None):
     base_image = None
     for layer, file_name in selected_layers.items():
         if layer is not None:
-            layer_image = Image.open(os.path.join(directories[layer], file_name)).convert("RGBA")
-            if base_image is None:
-                base_image = layer_image
-            else:
-                base_image.paste(layer_image, (0, 0), layer_image)
+            with Image.open(os.path.join(directories[layer], file_name)) as layer_image:  # Use context manager
+                layer_image = layer_image.convert("RGBA")
+                if base_image is None:
+                    base_image = layer_image.copy()
+                else:
+                    base_image.paste(layer_image, (0, 0), layer_image)
+                layer_image.close()  # Explicit cleanup
 
     return base_image, metadata
 

@@ -3,3 +3,5 @@ ipfshttpclient
 flask
 web3
 python-dotenv
+gunicorn 
+gevent
