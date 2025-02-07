@@ -1,17 +1,31 @@
 from flask import Flask, send_file, jsonify, Response  # Import `request`
 import os
+import psutil
+import logging
 from web3 import Web3
 from generate import generate_image  # Your image generation function
 import json
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-import psutil
 
 
+
+REDIS_URL = "redis://localhost:6379/0"  # Local Redis instance
 
 app = Flask(__name__)
 
-limiter = Limiter(app=app, key_func=get_remote_address)
+# Ensure Flask logs to stdout (Gunicorn captures stdout)
+gunicorn_logger = logging.getLogger('gunicorn.error')
+app.logger.handlers = gunicorn_logger.handlers
+app.logger.setLevel(gunicorn_logger.level)
+
+limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        storage_uri=REDIS_URL,
+        storage_options={"socket_connect_timeout": 30},  # Timeout for Redis connections
+        strategy="fixed-window",  # or "moving-window"
+    )
 
 # Directory to save generated images
 OUTPUT_DIR = "./output"
@@ -44,6 +58,7 @@ def is_token_minted(token_id):
 def log_resources():
     process = psutil.Process(os.getpid())
     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+
 
 @app.route("/id/<int:token_id>", methods=["GET"])
 @limiter.limit("60 per minute")  # Prevent abuse
