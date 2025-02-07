@@ -3,8 +3,15 @@ import os
 from web3 import Web3
 from generate import generate_image  # Your image generation function
 import json
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+import psutil
+
+
 
 app = Flask(__name__)
+
+limiter = Limiter(app=app, key_func=get_remote_address)
 
 # Directory to save generated images
 OUTPUT_DIR = "./output"
@@ -31,8 +38,15 @@ def is_token_minted(token_id):
     except Exception as e:
        
         return False
+    
+
+@app.before_request
+def log_resources():
+    process = psutil.Process(os.getpid())
+    app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 @app.route("/id/<int:token_id>", methods=["GET"])
+@limiter.limit("60 per minute")  # Prevent abuse
 def get_nft_metadata(token_id):
     try:
         # Check if the token is minted
@@ -58,6 +72,7 @@ def get_nft_metadata(token_id):
         return jsonify({"error": str(e)}), 400
 
 @app.route("/image/<int:token_id>", methods=["GET"])
+@limiter.limit("60 per minute")  # Prevent abuse
 def get_nft_image(token_id):
     try:
         # Check if the token is minted
