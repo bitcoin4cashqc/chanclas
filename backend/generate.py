@@ -76,9 +76,24 @@ def randomizing(token_id,nft_seed, rarity,d, directories, test = None):
 
     # Utility to format names (remove digits, dots, extensions, and replace `_`)
     def format_name(name):
-        name = re.sub(r"[0-9.\-_]+", " ", name)  # Remove digits, dots, dashes
-        name = re.sub(r"png", " ", name)  # Remove digits, dots, dashes
-        return re.sub(r"\s+", " ", name).strip()  # Remove extra spaces
+        # Remove file extension
+        name = name.replace('.png', '')
+        
+        # Save any instances of 3D or 3d
+        has_3d = "3D" in name
+        has_3d_lowercase = "3d" in name
+        
+        # Remove all digits and special characters
+        name = re.sub(r'[0-9.\-_]+', ' ', name)
+        
+        # Restore 3D/3d if they were present
+        if has_3d:
+            name = name.replace('D', '3D', 1)
+        if has_3d_lowercase:
+            name = name.replace('d', '3D', 1)
+            
+        # Clean up extra spaces and trim
+        return re.sub(r'\s+', ' ', name).strip()
 
     # Select layers based on rarity and exclusions
     for layer, options in rarity.items():
@@ -121,6 +136,10 @@ def randomizing(token_id,nft_seed, rarity,d, directories, test = None):
             })
             continue
 
+        # Skip eyewear if astronaut hat is selected
+        if layer == "09_Eyewear" and astronautBypass:
+            continue
+            
         # Regular layers
         choices = [item['file'] for item in adjusted_options]
         weights = [item['weight'] for item in adjusted_options]
