@@ -120,19 +120,7 @@ contract ChanclasICO is AccessControl {
     }
 
     function getCurrentRebate() external view returns (uint256) {
-        // Simulate period update for view function
         uint256 localCurrentPeriod = currentPeriodId;
-        // while (localCurrentPeriod < periods.length) {
-        //     Period memory period = periods[localCurrentPeriod];
-        //     if (block.timestamp <= period.endTime) {
-        //         break;
-        //     }
-        //     if (localCurrentPeriod + 1 < periods.length) {
-        //         localCurrentPeriod++;
-        //     } else {
-        //         break;
-        //     }
-        // }
         
         // Ensure we have a valid period
         require(localCurrentPeriod < periods.length, "No active periods");
