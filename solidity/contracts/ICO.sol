@@ -73,6 +73,9 @@ contract ChanclasICO is AccessControl {
     }
 
     function mint() external {
+        // Check if we need to advance the period due to time expiry
+        updatePeriodIfExpired();
+        
         Period storage period = periods[currentPeriodId];
         require(block.timestamp <= period.endTime, "Current period has ended");
         require(period.mintedCount < period.maxSupply, "Current period max supply reached");
@@ -96,32 +99,79 @@ contract ChanclasICO is AccessControl {
         }
     }
 
-    function getCurrentRebate() external view returns (uint256) {
-        Period storage period = periods[currentPeriodId];
+    // Helper function to update the current period if it has expired
+    function updatePeriodIfExpired() public {
+        while (currentPeriodId < periods.length) {
+            Period storage period = periods[currentPeriodId];
+            
+            // If current period is not expired, we're done
+            if (block.timestamp <= period.endTime) {
+                break;
+            }
+            
+            // If there's a next period, advance to it
+            if (currentPeriodId + 1 < periods.length) {
+                currentPeriodId++;
+            } else {
+                // We're at the last period, even if expired
+                break;
+            }
+        }
+    }
 
-        uint256 userMints = mintedPerUser[msg.sender][currentPeriodId];
+    function getCurrentRebate() external view returns (uint256) {
+        // Simulate period update for view function
+        uint256 localCurrentPeriod = currentPeriodId;
+        // while (localCurrentPeriod < periods.length) {
+        //     Period memory period = periods[localCurrentPeriod];
+        //     if (block.timestamp <= period.endTime) {
+        //         break;
+        //     }
+        //     if (localCurrentPeriod + 1 < periods.length) {
+        //         localCurrentPeriod++;
+        //     } else {
+        //         break;
+        //     }
+        // }
+        
+        // Ensure we have a valid period
+        require(localCurrentPeriod < periods.length, "No active periods");
+        
+        uint256 userMints = mintedPerUser[msg.sender][localCurrentPeriod];
         uint256 extraMints = userMints + 1; // Start counting from first mint
         uint256 discount = (maxRebate * extraMints) / (extraMints + curveSteepness);
 
-        uint256 pricePerNFT = period.price * (100 - discount) / 100;
+        uint256 pricePerNFT = periods[localCurrentPeriod].price * (100 - discount) / 100;
         return pricePerNFT;
-
     }
 
 
     function getCurrentPeriod() external view returns (uint256 periodId, Period memory period) {
-        require(currentPeriodId < periods.length, "No active periods");
-        Period memory activePeriod = periods[currentPeriodId];
-
-        if (block.timestamp <= activePeriod.endTime && activePeriod.mintedCount < activePeriod.maxSupply) {
-            return (currentPeriodId, activePeriod);
+        require(periods.length > 0, "No periods defined");
+        
+        // Create a local copy of currentPeriodId for view function simulation
+        uint256 localCurrentPeriod = currentPeriodId;
+        
+        // Simulate updatePeriodIfExpired logic for view function
+        while (localCurrentPeriod < periods.length) {
+            Period memory activePeriod = periods[localCurrentPeriod];
+            
+            if (block.timestamp <= activePeriod.endTime) {
+                break;
+            }
+            
+            if (localCurrentPeriod + 1 < periods.length) {
+                localCurrentPeriod++;
+            } else {
+                // We're at the last period, even if expired
+                break;
+            }
         }
-
-        if (currentPeriodId + 1 < periods.length) {
-            return (currentPeriodId + 1, periods[currentPeriodId + 1]);
-        }
-
-        revert("No active periods");
+        
+        // Make sure we haven't gone beyond the last period
+        require(localCurrentPeriod < periods.length, "No active periods");
+        
+        return (localCurrentPeriod, periods[localCurrentPeriod]);
     }
 
     function getPeriods() external view returns (Period[] memory) {
