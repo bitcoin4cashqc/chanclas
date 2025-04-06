@@ -260,6 +260,13 @@ export const ICOAbi = [
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "updatePeriodIfExpired",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -275,33 +282,6 @@ export const ICOAbi = [
 				"internalType": "address",
 				"name": "nftContractAddress",
 				"type": "address"
-			},
-			{
-				"components": [
-					{
-						"internalType": "uint256",
-						"name": "endTime",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "maxSupply",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "price",
-						"type": "uint256"
-					},
-					{
-						"internalType": "uint256",
-						"name": "mintedCount",
-						"type": "uint256"
-					}
-				],
-				"internalType": "struct ChanclasICO.Period[]",
-				"name": "initialPeriods",
-				"type": "tuple[]"
 			}
 		],
 		"stateMutability": "nonpayable",
