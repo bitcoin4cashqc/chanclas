@@ -30,8 +30,7 @@ contract ChanclasICO is AccessControl {
     constructor(
         address _admin,
         address usdcAddress,
-        address nftContractAddress,
-        Period[] memory initialPeriods
+        address nftContractAddress
     ) {
         admin = _admin;
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
@@ -39,12 +38,15 @@ contract ChanclasICO is AccessControl {
         usdc = IERC20(usdcAddress);
         nftContract = Chanclas(nftContractAddress);
 
-        for (uint256 i = 0; i < initialPeriods.length; i++) {
-            periods.push(initialPeriods[i]);
-        }
+        periods.push(Period({
+            endTime: block.timestamp + 10 days,
+            maxSupply: 1000,
+            price: 1500000,
+            mintedCount: 32
+        }));
 
         require(periods.length > 0, "At least one period must be defined");
-        currentPeriodId = 0;
+        
     }
 
     function changeBonus(uint16 _maxRebate, uint16 _curveSteepness) external  onlyRole(DEFAULT_ADMIN_ROLE){
