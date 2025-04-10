@@ -23,7 +23,7 @@ const projectId = '4a2aad5472b76afb2a498c7c9bb03197';
 
 // Example addresses
 const chanclas721 = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4";
-const ico = "0x8A8c9b73014359cfA8EbEC6F0601634B8E3A39f2"
+const ico = "0xa1D824Fff9572BaEe4e970b99A8527887440832F"
 const usdcbase = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
 
 const backend_api = "https://chanclas.fun/";
