@@ -7,8 +7,12 @@ from generate import generate_image  # Your image generation function
 import json
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from redis.exceptions import RedisError
+import time
 
-
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 REDIS_URL = "redis://localhost:6379/0"  # Local Redis instance
 
@@ -19,12 +23,24 @@ gunicorn_logger = logging.getLogger('gunicorn.error')
 app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
-limiter = Limiter(
+# Initialize limiter with fallback
+try:
+    limiter = Limiter(
         app=app,
         key_func=get_remote_address,
         storage_uri=REDIS_URL,
-        storage_options={"socket_connect_timeout": 30},  # Timeout for Redis connections
-        strategy="fixed-window",  # or "moving-window"
+        storage_options={"socket_connect_timeout": 30},
+        strategy="fixed-window",
+        default_limits=["200 per day", "50 per hour"]
+    )
+except RedisError as e:
+    logger.warning(f"Redis connection failed: {e}. Falling back to in-memory storage.")
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        storage_uri="memory://",
+        strategy="fixed-window",
+        default_limits=["200 per day", "50 per hour"]
     )
 
 # Directory to save generated images
@@ -39,29 +55,41 @@ CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Replace with 
 with open("Chanclas_ABI.json", "r") as f:
     CONTRACT_ABI = json.load(f)
 
-# Initialize Web3
-web3 = Web3(Web3.HTTPProvider(RPC_URL))
-contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+# Initialize Web3 with retry logic
+def init_web3():
+    max_retries = 3
+    retry_delay = 1
+    
+    for attempt in range(max_retries):
+        try:
+            web3 = Web3(Web3.HTTPProvider(RPC_URL))
+            if web3.is_connected():
+                return web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+        except Exception as e:
+            if attempt < max_retries - 1:
+                time.sleep(retry_delay)
+                retry_delay *= 2
+            else:
+                raise e
+
+contract = init_web3()
 
 def is_token_minted(token_id):
     """Check if a token is minted by querying the owner."""
     try:
         owner = contract.functions.ownerOf(token_id).call()
-        
         return True
     except Exception as e:
-       
+        logger.error(f"Error checking token {token_id}: {e}")
         return False
-    
 
 @app.before_request
 def log_resources():
     process = psutil.Process(os.getpid())
     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
-
 @app.route("/id/<int:token_id>", methods=["GET"])
-@limiter.limit("60 per minute")  # Prevent abuse
+@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
         # Check if the token is minted
@@ -77,17 +105,27 @@ def get_nft_metadata(token_id):
 
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
-            generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+            try:
+                generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+            except Exception as e:
+                logger.error(f"Error generating image for token {token_id}: {e}")
+                return jsonify({"error": "Failed to generate metadata"}), 500
 
         # Return metadata
-        with open(metadata_path, "r") as f:
-            metadata = json.load(f)
-        return Response(json.dumps(metadata), mimetype="application/json")
+        try:
+            with open(metadata_path, "r") as f:
+                metadata = json.load(f)
+            return Response(json.dumps(metadata), mimetype="application/json")
+        except Exception as e:
+            logger.error(f"Error reading metadata for token {token_id}: {e}")
+            return jsonify({"error": "Failed to read metadata"}), 500
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        logger.error(f"Unexpected error for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/image/<int:token_id>", methods=["GET"])
-@limiter.limit("60 per minute")  # Prevent abuse
+@limiter.limit("60 per minute")
 def get_nft_image(token_id):
     try:
         # Check if the token is minted
@@ -103,13 +141,16 @@ def get_nft_image(token_id):
 
         # Generate image if missing
         if not os.path.exists(image_path):
-            generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate ,OUTPUT_DIR)
+            try:
+                generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+            except Exception as e:
+                logger.error(f"Error generating image for token {token_id}: {e}")
+                return jsonify({"error": "Failed to generate image"}), 500
 
         return send_file(image_path, mimetype="image/png")
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
-    
-
+        logger.error(f"Unexpected error for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=False, port=3000)
