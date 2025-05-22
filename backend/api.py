@@ -48,21 +48,52 @@ OUTPUT_DIR = "./output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Web3 configuration
-RPC_URL = "https://mainnet.base.org/"  # Replace with your RPC URL
-CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Replace with your contract address
+CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Contract address
+
+# RPC URLs ordered by speed (fastest first)
+RPC_URLS = [
+    "https://base-rpc.publicnode.com", 
+    "https://base-mainnet.public.blastapi.io",  
+    "wss://0xrpc.io/base", 
+    "https://base.blockpi.network/v1/rpc/public",
+    "https://developer-access-mainnet.base.org",  
+    "https://mainnet.base.org",  
+    "https://base-pokt.nodies.app", 
+    "https://base.lava.build",  
+    "https://base.api.onfinality.io/public", 
+    "https://endpoints.omniatech.io/v1/base/mainnet/public", 
+    "https://0xrpc.io/base", 
+    "https://base.meowrpc.com",  
+    "https://rpc.therpc.io/base", 
+    "https://rpc.owlracle.info/base/70d38ce1826c4a60bb2a8e05a6c8b20f", 
+    "https://base.drpc.org", 
+    "https://base.rpc.subquery.network/public",  
+    "https://base.llamarpc.com", 
+    "https://api.zan.top/base-mainnet", 
+]
+
+def get_next_rpc():
+    """Get the next RPC URL in rotation."""
+    if not hasattr(get_next_rpc, "current_index"):
+        get_next_rpc.current_index = 0
+    
+    rpc_url = RPC_URLS[get_next_rpc.current_index]
+    get_next_rpc.current_index = (get_next_rpc.current_index + 1) % len(RPC_URLS)
+    return rpc_url
 
 # Load the contract ABI
 with open("Chanclas_ABI.json", "r") as f:
     CONTRACT_ABI = json.load(f)
 
-# Initialize Web3 with retry logic
-def init_web3():
-    max_retries = 3
+def get_web3_contract():
+    """Get a new Web3 contract instance with retry logic."""
+    max_retries = len(RPC_URLS)
     retry_delay = 1
     
     for attempt in range(max_retries):
         try:
-            web3 = Web3(Web3.HTTPProvider(RPC_URL))
+            rpc_url = get_next_rpc()
+            web3 = Web3(Web3.HTTPProvider(rpc_url))
             if web3.is_connected():
                 return web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
         except Exception as e:
@@ -72,40 +103,54 @@ def init_web3():
             else:
                 raise e
 
-contract = init_web3()
-
 def is_token_minted(token_id):
     """Check if a token is minted by querying the owner."""
     try:
+        contract = get_web3_contract()
         owner = contract.functions.ownerOf(token_id).call()
         return True
     except Exception as e:
         logger.error(f"Error checking token {token_id}: {e}")
         return False
 
-@app.before_request
-def log_resources():
-    process = psutil.Process(os.getpid())
-    app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
+# @app.before_request
+# def log_resources():
+#     process = psutil.Process(os.getpid())
+#     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 @app.route("/id/<int:token_id>", methods=["GET"])
 @limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
+        logger.info(f"Reading metadata for token {token_id}")
+        # Metadata path
+        metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
+        image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
+
+        # If both files exist, skip the mint check
+        if os.path.exists(metadata_path) and os.path.exists(image_path):
+            try:
+                with open(metadata_path, "r") as f:
+                    metadata = json.load(f)
+                logger.info(f"Metadata read successfully for token {token_id}")
+                return Response(json.dumps(metadata), mimetype="application/json")
+            except Exception as e:
+                logger.error(f"Error reading metadata for token {token_id}: {e}")
+                return jsonify({"error": "Failed to read metadata"}), 500
+
         # Check if the token is minted
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
 
-        # Query the blockchain for token data
-        token_data = contract.functions.getTokenData(token_id).call()
-        seed, period_id, extraMints, curveSteepness, maxRebate = token_data
-
-        # Metadata path
-        metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
+        
 
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
             try:
+                # Query the blockchain for token data
+                contract = get_web3_contract()
+                token_data = contract.functions.getTokenData(token_id).call()
+                seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
@@ -115,6 +160,7 @@ def get_nft_metadata(token_id):
         try:
             with open(metadata_path, "r") as f:
                 metadata = json.load(f)
+                logger.info(f"Metadata read successfully AFTER GENERATION for token {token_id}")
             return Response(json.dumps(metadata), mimetype="application/json")
         except Exception as e:
             logger.error(f"Error reading metadata for token {token_id}: {e}")
@@ -127,26 +173,35 @@ def get_nft_metadata(token_id):
 @app.route("/image/<int:token_id>", methods=["GET"])
 @limiter.limit("60 per minute")
 def get_nft_image(token_id):
+    logger.info(f"Reading image for token {token_id}")
     try:
+        # Image path
+        image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
+        metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
+
+        # If both files exist, skip the mint check
+        if os.path.exists(image_path):
+            logger.info(f"Image read successfully for token {token_id}")
+            return send_file(image_path, mimetype="image/png")
+
         # Check if the token is minted
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
 
-        # Query the blockchain for token data
-        token_data = contract.functions.getTokenData(token_id).call()
-        seed, period_id, extraMints, curveSteepness, maxRebate = token_data
-
-        # Image path
-        image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
+        
 
         # Generate image if missing
         if not os.path.exists(image_path):
             try:
+                # Query the blockchain for token data
+                contract = get_web3_contract()
+                token_data = contract.functions.getTokenData(token_id).call()
+                seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate image"}), 500
-
+        logger.info(f"Image read successfully AFTER GENERATION for token {token_id}")
         return send_file(image_path, mimetype="image/png")
     except Exception as e:
         logger.error(f"Unexpected error for token {token_id}: {e}")
