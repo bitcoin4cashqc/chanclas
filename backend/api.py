@@ -154,7 +154,6 @@ def localhost_only(f):
     return decorated_function
 
 @app.route("/id/<int:token_id>", methods=["GET"])
-@localhost_only
 #@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
@@ -210,7 +209,6 @@ def get_nft_metadata(token_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/image/<int:token_id>", methods=["GET"])
-@localhost_only
 #@limiter.limit("60 per minute")
 def get_nft_image(token_id):
     logger.info(f"Reading image for token {token_id}")
