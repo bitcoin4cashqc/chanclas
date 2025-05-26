@@ -1,4 +1,4 @@
-from flask import Flask, send_file, jsonify, Response  # Import `request`
+from flask import Flask, send_file, jsonify, Response, request  # Import `request`
 import os
 import psutil
 import logging
@@ -13,13 +13,14 @@ import gc
 import resource
 import signal
 from functools import wraps
+import tempfile
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Set memory limits (in bytes) - 100MB per worker
-MEMORY_LIMIT = 100 * 1024 * 1024  # 100mn
+MEMORY_LIMIT = 100 * 1024 * 1024  # 100MB
 resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT, MEMORY_LIMIT))
 
 REDIS_URL = "redis://localhost:6379/0"  # Local Redis instance
@@ -143,7 +144,17 @@ def is_token_minted(token_id):
 #     process = psutil.Process(os.getpid())
 #     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
+def localhost_only(f):
+    """Decorator to ensure requests only come from localhost"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.remote_addr not in ['127.0.0.1', 'localhost']:
+            return jsonify({"error": "Access denied - localhost only"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
 @app.route("/id/<int:token_id>", methods=["GET"])
+@localhost_only
 #@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
@@ -199,6 +210,7 @@ def get_nft_metadata(token_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/image/<int:token_id>", methods=["GET"])
+@localhost_only
 #@limiter.limit("60 per minute")
 def get_nft_image(token_id):
     logger.info(f"Reading image for token {token_id}")
@@ -243,6 +255,93 @@ def after_request(response):
     """Cleanup after each request"""
     cleanup_resources()
     return response
+
+# Test endpoint for stress testing
+@app.route("/test/generate/<int:token_id>", methods=["GET"])
+@localhost_only
+def test_generate(token_id):
+    """Test endpoint that bypasses web3 checks and uses temporary directory"""
+    try:
+        logger.info(f"Test generating token {token_id}")
+        memory_monitor()
+        
+        # Create temporary directory for this request
+        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
+        try:
+            # Generate with test parameters
+            period = 0  # Use period 0 for testing
+            nft_seed = token_id  # Use token_id as seed for consistency
+            extraMints = 0
+            curveSteepness = 1
+            maxRebate = 0
+            
+            # Generate image
+            image_path, metadata_path = generate_image(
+                token_id=token_id,
+                period=period,
+                nft_seed=nft_seed,
+                extraMints=extraMints,
+                curveSteepness=curveSteepness,
+                maxRebate=maxRebate,
+                output_dir=temp_dir
+            )
+            
+            # Read metadata
+            with open(metadata_path, "r") as f:
+                metadata = json.load(f)
+            
+            # Send response
+            return Response(json.dumps(metadata), mimetype="application/json")
+            
+        finally:
+            # Clean up temporary directory
+            import shutil
+            shutil.rmtree(temp_dir)
+            
+    except Exception as e:
+        logger.error(f"Error in test generation for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/test/image/<int:token_id>", methods=["GET"])
+@localhost_only
+def test_image(token_id):
+    """Test endpoint for getting generated image"""
+    try:
+        logger.info(f"Test getting image for token {token_id}")
+        memory_monitor()
+        
+        # Create temporary directory for this request
+        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
+        try:
+            # Generate with test parameters
+            period = 0  # Use period 0 for testing
+            nft_seed = token_id  # Use token_id as seed for consistency
+            extraMints = 0
+            curveSteepness = 1
+            maxRebate = 0
+            
+            # Generate image
+            image_path, _ = generate_image(
+                token_id=token_id,
+                period=period,
+                nft_seed=nft_seed,
+                extraMints=extraMints,
+                curveSteepness=curveSteepness,
+                maxRebate=maxRebate,
+                output_dir=temp_dir
+            )
+            
+            # Send image
+            return send_file(image_path, mimetype="image/png")
+            
+        finally:
+            # Clean up temporary directory
+            import shutil
+            shutil.rmtree(temp_dir)
+            
+    except Exception as e:
+        logger.error(f"Error in test image for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(debug=False, port=3000)
