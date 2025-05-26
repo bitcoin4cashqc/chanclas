@@ -9,10 +9,18 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from redis.exceptions import RedisError
 import time
+import gc
+import resource
+import signal
+from functools import wraps
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Set memory limits (in bytes) - 100MB per worker
+MEMORY_LIMIT = 100 * 1024 * 1024  # 100mn
+resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT, MEMORY_LIMIT))
 
 REDIS_URL = "redis://localhost:6379/0"  # Local Redis instance
 
@@ -72,6 +80,22 @@ RPC_URLS = [
     "https://api.zan.top/base-mainnet", 
 ]
 
+def cleanup_resources():
+    """Clean up resources after request"""
+    gc.collect()
+    if hasattr(cleanup_resources, 'web3'):
+        del cleanup_resources.web3
+
+def memory_monitor():
+    """Monitor memory usage"""
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    memory_usage = memory_info.rss / 1024 / 1024  # Convert to MB
+    if memory_usage > MEMORY_LIMIT / (1024 * 1024) * 0.9:  # 90% of limit
+        logger.warning(f"High memory usage detected: {memory_usage:.2f}MB")
+        cleanup_resources()
+        gc.collect()
+
 def get_next_rpc():
     """Get the next RPC URL in rotation."""
     if not hasattr(get_next_rpc, "current_index"):
@@ -95,6 +119,7 @@ def get_web3_contract():
             rpc_url = get_next_rpc()
             web3 = Web3(Web3.HTTPProvider(rpc_url))
             if web3.is_connected():
+                cleanup_resources.web3 = web3  # Store for cleanup
                 return web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
         except Exception as e:
             if attempt < max_retries - 1:
@@ -123,6 +148,8 @@ def is_token_minted(token_id):
 def get_nft_metadata(token_id):
     try:
         logger.info(f"Reading metadata for token {token_id}")
+        memory_monitor()
+        
         # Metadata path
         metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
         image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
@@ -152,6 +179,7 @@ def get_nft_metadata(token_id):
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+                cleanup_resources()  # Clean up after image generation
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate metadata"}), 500
@@ -175,6 +203,8 @@ def get_nft_metadata(token_id):
 def get_nft_image(token_id):
     logger.info(f"Reading image for token {token_id}")
     try:
+        memory_monitor()
+        
         # Image path
         image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
         metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
@@ -198,6 +228,7 @@ def get_nft_image(token_id):
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+                cleanup_resources()  # Clean up after image generation
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate image"}), 500
@@ -206,6 +237,12 @@ def get_nft_image(token_id):
     except Exception as e:
         logger.error(f"Unexpected error for token {token_id}: {e}")
         return jsonify({"error": str(e)}), 500
+
+@app.after_request
+def after_request(response):
+    """Cleanup after each request"""
+    cleanup_resources()
+    return response
 
 if __name__ == "__main__":
     app.run(debug=False, port=3000)
