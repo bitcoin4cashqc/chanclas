@@ -24,24 +24,24 @@ app.logger.handlers = gunicorn_logger.handlers
 app.logger.setLevel(gunicorn_logger.level)
 
 # Initialize limiter with fallback
-try:
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
-        storage_uri=REDIS_URL,
-        storage_options={"socket_connect_timeout": 30},
-        strategy="fixed-window",
-        default_limits=["200 per day", "50 per hour"]
-    )
-except RedisError as e:
-    logger.warning(f"Redis connection failed: {e}. Falling back to in-memory storage.")
-    limiter = Limiter(
-        app=app,
-        key_func=get_remote_address,
-        storage_uri="memory://",
-        strategy="fixed-window",
-        default_limits=["200 per day", "50 per hour"]
-    )
+# try:
+#     limiter = Limiter(
+#         app=app,
+#         key_func=get_remote_address,
+#         storage_uri=REDIS_URL,
+#         storage_options={"socket_connect_timeout": 30},
+#         strategy="fixed-window",
+#         default_limits=["200 per day", "50 per hour"]
+#     )
+# except RedisError as e:
+#     logger.warning(f"Redis connection failed: {e}. Falling back to in-memory storage.")
+#     limiter = Limiter(
+#         app=app,
+#         key_func=get_remote_address,
+#         storage_uri="memory://",
+#         strategy="fixed-window",
+#         default_limits=["200 per day", "50 per hour"]
+#     )
 
 # Directory to save generated images
 OUTPUT_DIR = "./output"
@@ -119,7 +119,7 @@ def is_token_minted(token_id):
 #     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
 @app.route("/id/<int:token_id>", methods=["GET"])
-@limiter.limit("60 per minute")
+#@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
         logger.info(f"Reading metadata for token {token_id}")
@@ -171,7 +171,7 @@ def get_nft_metadata(token_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route("/image/<int:token_id>", methods=["GET"])
-@limiter.limit("60 per minute")
+#@limiter.limit("60 per minute")
 def get_nft_image(token_id):
     logger.info(f"Reading image for token {token_id}")
     try:
