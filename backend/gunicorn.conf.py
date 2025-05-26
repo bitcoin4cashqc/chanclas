@@ -3,14 +3,14 @@ import os
 
 # Server socket
 bind = "0.0.0.0:3000"
-backlog = 2048
+backlog = 1024
 
 # Worker processes
 workers = 2  # Keep it at 2 for 1 vCPU
 worker_class = "gthread"
 threads = 2
-worker_connections = 1000
-timeout = 120
+worker_connections = 500
+timeout = 60
 keepalive = 5
 
 # Process naming
@@ -59,7 +59,7 @@ def worker_abort(worker):
     worker.log.info("Worker received SIGABRT signal")
 
 # Memory management
-max_requests = 1000
+max_requests = 500
 max_requests_jitter = 50
 
 def worker_exit(server, worker):
