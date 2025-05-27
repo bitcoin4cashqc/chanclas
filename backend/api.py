@@ -1,4 +1,4 @@
-from flask import Flask, send_file, jsonify, Response, request  # Import `request`
+from flask import Flask, send_file, jsonify, Response  # Import `request`
 import os
 import psutil
 import logging
@@ -9,23 +9,10 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from redis.exceptions import RedisError
 import time
-import gc
-import resource
-import signal
-from functools import wraps
-import tempfile
-import ssl
-import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Set memory limits (in bytes) - 100MB per worker
-MEMORY_LIMIT = 100 * 1024 * 1024  # 100MB
-resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT, MEMORY_LIMIT))
 
 REDIS_URL = "redis://localhost:6379/0"  # Local Redis instance
 
@@ -65,9 +52,9 @@ CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Contract addr
 
 # RPC URLs ordered by speed (fastest first)
 RPC_URLS = [
-    "wss://0xrpc.io/base",  # WebSocket endpoint first
     "https://base-rpc.publicnode.com", 
     "https://base-mainnet.public.blastapi.io",  
+    "wss://0xrpc.io/base", 
     "https://base.blockpi.network/v1/rpc/public",
     "https://developer-access-mainnet.base.org",  
     "https://mainnet.base.org",  
@@ -85,38 +72,6 @@ RPC_URLS = [
     "https://api.zan.top/base-mainnet", 
 ]
 
-# Configure requests session with retry strategy
-session = requests.Session()
-retry_strategy = Retry(
-    total=3,
-    backoff_factor=0.5,
-    status_forcelist=[500, 502, 503, 504]
-)
-adapter = HTTPAdapter(max_retries=retry_strategy)
-session.mount("http://", adapter)
-session.mount("https://", adapter)
-
-def cleanup_resources():
-    """Clean up resources after request"""
-    gc.collect()
-    if hasattr(cleanup_resources, 'web3'):
-        try:
-            if cleanup_resources.web3:
-                cleanup_resources.web3 = None
-        except:
-            pass
-    gc.collect()
-
-def memory_monitor():
-    """Monitor memory usage"""
-    process = psutil.Process(os.getpid())
-    memory_info = process.memory_info()
-    memory_usage = memory_info.rss / 1024 / 1024  # Convert to MB
-    if memory_usage > MEMORY_LIMIT / (1024 * 1024) * 0.9:  # 90% of limit
-        logger.warning(f"High memory usage detected: {memory_usage:.2f}MB")
-        cleanup_resources()
-        gc.collect()
-
 def get_next_rpc():
     """Get the next RPC URL in rotation."""
     if not hasattr(get_next_rpc, "current_index"):
@@ -132,114 +87,42 @@ with open("Chanclas_ABI.json", "r") as f:
 
 def get_web3_contract():
     """Get a new Web3 contract instance with retry logic."""
-    max_retries = 3
+    max_retries = len(RPC_URLS)
     retry_delay = 1
-    
-    # Clean up any existing Web3 instance
-    cleanup_resources()
     
     for attempt in range(max_retries):
         try:
             rpc_url = get_next_rpc()
-            logger.info(f"Attempting to connect to RPC: {rpc_url}")
-            
-            # Configure Web3 based on URL type
-            if rpc_url.startswith('wss://'):
-                provider = Web3.WebsocketProvider(
-                    rpc_url,
-                    websocket_kwargs={
-                        'timeout': 10,
-                        'sslopt': {"cert_reqs": ssl.CERT_NONE}
-                    }
-                )
-            else:
-                # For HTTP/HTTPS, use requests session
-                provider = Web3.HTTPProvider(
-                    rpc_url,
-                    request_kwargs={
-                        'timeout': 10,
-                        'verify': False,
-                        'headers': {
-                            'Content-Type': 'application/json',
-                        },
-                        'session': session  # Use our configured session
-                    }
-                )
-            
-            web3 = Web3(provider)
-            
-            if not web3.is_connected():
-                logger.warning(f"Failed to connect to RPC {rpc_url}")
-                continue
-                
-            # Store for cleanup
-            cleanup_resources.web3 = web3
-            
-            # Create contract instance
-            contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
-            if contract is None:
-                raise Exception("Failed to create contract instance")
-                
-            logger.info(f"Successfully connected to RPC: {rpc_url}")
-            return contract
-            
+            web3 = Web3(Web3.HTTPProvider(rpc_url))
+            if web3.is_connected():
+                return web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
         except Exception as e:
-            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed with RPC {rpc_url}: {str(e)}")
-            # Clean up on error
-            cleanup_resources()
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 retry_delay *= 2
             else:
-                logger.error("All RPC attempts failed")
-                raise Exception(f"Failed to connect to any RPC after {max_retries} attempts")
+                raise e
 
 def is_token_minted(token_id):
     """Check if a token is minted by querying the owner."""
     try:
         contract = get_web3_contract()
-        if contract is None:
-            logger.error(f"Failed to get contract for token {token_id}")
-            return False
-            
-        try:
-            owner = contract.functions.ownerOf(token_id).call()
-            return True
-        except Exception as e:
-            if "ERC721: invalid token ID" in str(e):
-                logger.info(f"Token {token_id} is not minted")
-                return False
-            else:
-                logger.error(f"Error checking owner for token {token_id}: {e}")
-                return False
+        owner = contract.functions.ownerOf(token_id).call()
+        return True
     except Exception as e:
         logger.error(f"Error checking token {token_id}: {e}")
         return False
-    finally:
-        # Always clean up after checking
-        cleanup_resources()
 
 # @app.before_request
 # def log_resources():
 #     process = psutil.Process(os.getpid())
 #     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
-def localhost_only(f):
-    """Decorator to ensure requests only come from localhost"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        if request.remote_addr not in ['127.0.0.1', 'localhost']:
-            return jsonify({"error": "Access denied - localhost only"}), 403
-        return f(*args, **kwargs)
-    return decorated_function
-
 @app.route("/id/<int:token_id>", methods=["GET"])
 #@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
     try:
         logger.info(f"Reading metadata for token {token_id}")
-        memory_monitor()
-        
         # Metadata path
         metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
         image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
@@ -259,6 +142,8 @@ def get_nft_metadata(token_id):
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
 
+        
+
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
             try:
@@ -267,7 +152,6 @@ def get_nft_metadata(token_id):
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
-                cleanup_resources()  # Clean up after image generation
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate metadata"}), 500
@@ -291,8 +175,6 @@ def get_nft_metadata(token_id):
 def get_nft_image(token_id):
     logger.info(f"Reading image for token {token_id}")
     try:
-        memory_monitor()
-        
         # Image path
         image_path = os.path.join(OUTPUT_DIR, f"{token_id}.png")
         metadata_path = os.path.join(OUTPUT_DIR, f"{token_id}.json")
@@ -306,6 +188,8 @@ def get_nft_image(token_id):
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
 
+        
+
         # Generate image if missing
         if not os.path.exists(image_path):
             try:
@@ -314,7 +198,6 @@ def get_nft_image(token_id):
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
-                cleanup_resources()  # Clean up after image generation
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate image"}), 500
@@ -322,99 +205,6 @@ def get_nft_image(token_id):
         return send_file(image_path, mimetype="image/png")
     except Exception as e:
         logger.error(f"Unexpected error for token {token_id}: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.after_request
-def after_request(response):
-    """Cleanup after each request"""
-    cleanup_resources()
-    return response
-
-# Test endpoint for stress testing
-@app.route("/test/generate/<int:token_id>", methods=["GET"])
-@localhost_only
-def test_generate(token_id):
-    """Test endpoint that bypasses web3 checks and uses temporary directory"""
-    try:
-        logger.info(f"Test generating token {token_id}")
-        memory_monitor()
-        
-        # Create temporary directory for this request
-        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
-        try:
-            # Generate with test parameters
-            period = 0  # Use period 0 for testing
-            nft_seed = token_id  # Use token_id as seed for consistency
-            extraMints = 0
-            curveSteepness = 1
-            maxRebate = 0
-            
-            # Generate image
-            image_path, metadata_path = generate_image(
-                token_id=token_id,
-                period=period,
-                nft_seed=nft_seed,
-                extraMints=extraMints,
-                curveSteepness=curveSteepness,
-                maxRebate=maxRebate,
-                output_dir=temp_dir
-            )
-            
-            # Read metadata
-            with open(metadata_path, "r") as f:
-                metadata = json.load(f)
-            
-            # Send response
-            return Response(json.dumps(metadata), mimetype="application/json")
-            
-        finally:
-            # Clean up temporary directory
-            import shutil
-            shutil.rmtree(temp_dir)
-            
-    except Exception as e:
-        logger.error(f"Error in test generation for token {token_id}: {e}")
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/test/image/<int:token_id>", methods=["GET"])
-@localhost_only
-def test_image(token_id):
-    """Test endpoint for getting generated image"""
-    try:
-        logger.info(f"Test getting image for token {token_id}")
-        memory_monitor()
-        
-        # Create temporary directory for this request
-        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
-        try:
-            # Generate with test parameters
-            period = 0  # Use period 0 for testing
-            nft_seed = token_id  # Use token_id as seed for consistency
-            extraMints = 0
-            curveSteepness = 1
-            maxRebate = 0
-            
-            # Generate image
-            image_path, _ = generate_image(
-                token_id=token_id,
-                period=period,
-                nft_seed=nft_seed,
-                extraMints=extraMints,
-                curveSteepness=curveSteepness,
-                maxRebate=maxRebate,
-                output_dir=temp_dir
-            )
-            
-            # Send image
-            return send_file(image_path, mimetype="image/png")
-            
-        finally:
-            # Clean up temporary directory
-            import shutil
-            shutil.rmtree(temp_dir)
-            
-    except Exception as e:
-        logger.error(f"Error in test image for token {token_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
