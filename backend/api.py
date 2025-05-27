@@ -1,4 +1,4 @@
-from flask import Flask, send_file, jsonify, Response  # Import `request`
+from flask import Flask, send_file, jsonify, Response, request
 import os
 import psutil
 import logging
@@ -9,6 +9,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from redis.exceptions import RedisError
 import time
+import tempfile
+from functools import wraps
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -205,6 +207,100 @@ def get_nft_image(token_id):
         return send_file(image_path, mimetype="image/png")
     except Exception as e:
         logger.error(f"Unexpected error for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+def localhost_only(f):
+    """Decorator to ensure requests only come from localhost"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if request.remote_addr not in ['127.0.0.1', 'localhost']:
+            return jsonify({"error": "Access denied - localhost only"}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Test endpoint for stress testing
+@app.route("/test/generate/<int:token_id>", methods=["GET"])
+@localhost_only
+def test_generate(token_id):
+    """Test endpoint that bypasses web3 checks and uses temporary directory"""
+    try:
+        logger.info(f"Test generating token {token_id}")
+        
+        # Create temporary directory for this request
+        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
+        try:
+            # Generate with test parameters
+            period = 0  # Use period 0 for testing
+            nft_seed = token_id  # Use token_id as seed for consistency
+            extraMints = 0
+            curveSteepness = 1
+            maxRebate = 0
+            
+            # Generate image
+            image_path, metadata_path = generate_image(
+                token_id=token_id,
+                period=period,
+                nft_seed=nft_seed,
+                extraMints=extraMints,
+                curveSteepness=curveSteepness,
+                maxRebate=maxRebate,
+                output_dir=temp_dir
+            )
+            
+            # Read metadata
+            with open(metadata_path, "r") as f:
+                metadata = json.load(f)
+            
+            # Send response
+            return Response(json.dumps(metadata), mimetype="application/json")
+            
+        finally:
+            # Clean up temporary directory
+            import shutil
+            shutil.rmtree(temp_dir)
+            
+    except Exception as e:
+        logger.error(f"Error in test generation for token {token_id}: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/test/image/<int:token_id>", methods=["GET"])
+@localhost_only
+def test_image(token_id):
+    """Test endpoint for getting generated image"""
+    try:
+        logger.info(f"Test getting image for token {token_id}")
+        
+        # Create temporary directory for this request
+        temp_dir = tempfile.mkdtemp(prefix=f'chanclas_test_{token_id}_')
+        try:
+            # Generate with test parameters
+            period = 0  # Use period 0 for testing
+            nft_seed = token_id  # Use token_id as seed for consistency
+            extraMints = 0
+            curveSteepness = 1
+            maxRebate = 0
+            
+            # Generate image
+            image_path, _ = generate_image(
+                token_id=token_id,
+                period=period,
+                nft_seed=nft_seed,
+                extraMints=extraMints,
+                curveSteepness=curveSteepness,
+                maxRebate=maxRebate,
+                output_dir=temp_dir
+            )
+            
+            # Send image
+            return send_file(image_path, mimetype="image/png")
+            
+        finally:
+            # Clean up temporary directory
+            import shutil
+            shutil.rmtree(temp_dir)
+            
+    except Exception as e:
+        logger.error(f"Error in test image for token {token_id}: {e}")
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
