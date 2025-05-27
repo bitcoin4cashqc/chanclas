@@ -15,6 +15,9 @@ import signal
 from functools import wraps
 import tempfile
 import ssl
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -82,6 +85,17 @@ RPC_URLS = [
     "https://api.zan.top/base-mainnet", 
 ]
 
+# Configure requests session with retry strategy
+session = requests.Session()
+retry_strategy = Retry(
+    total=3,
+    backoff_factor=0.5,
+    status_forcelist=[500, 502, 503, 504]
+)
+adapter = HTTPAdapter(max_retries=retry_strategy)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
+
 def cleanup_resources():
     """Clean up resources after request"""
     gc.collect()
@@ -118,7 +132,7 @@ with open("Chanclas_ABI.json", "r") as f:
 
 def get_web3_contract():
     """Get a new Web3 contract instance with retry logic."""
-    max_retries = 3  # Reduced number of retries
+    max_retries = 3
     retry_delay = 1
     
     # Clean up any existing Web3 instance
@@ -134,19 +148,21 @@ def get_web3_contract():
                 provider = Web3.WebsocketProvider(
                     rpc_url,
                     websocket_kwargs={
-                        'timeout': 10,  # Reduced timeout
+                        'timeout': 10,
                         'sslopt': {"cert_reqs": ssl.CERT_NONE}
                     }
                 )
             else:
+                # For HTTP/HTTPS, use requests session
                 provider = Web3.HTTPProvider(
                     rpc_url,
                     request_kwargs={
-                        'timeout': 10,  # Reduced timeout
+                        'timeout': 10,
                         'verify': False,
                         'headers': {
                             'Content-Type': 'application/json',
-                        }
+                        },
+                        'session': session  # Use our configured session
                     }
                 )
             
