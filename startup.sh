@@ -33,7 +33,7 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Start gunicorn screen session
 echo "Starting backend service..."
 echo "Using project directory: $PROJECT_DIR"
-start_screen_session "backend" "cd $PROJECT_DIR/backend && echo 'Current directory: \$(pwd)' && echo 'Checking gunicorn.conf.py exists: \$(ls -l gunicorn.conf.py)' && gunicorn -c gunicorn.conf.py api:app"
+start_screen_session "backend" "cd $PROJECT_DIR/backend && source venv/bin/activate && gunicorn -c gunicorn.conf.py api:app"
 
 # Start cloudflared screen session
 echo "Starting cloudflared service..."
