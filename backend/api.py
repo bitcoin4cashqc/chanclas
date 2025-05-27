@@ -119,22 +119,43 @@ def get_web3_contract():
         try:
             rpc_url = get_next_rpc()
             web3 = Web3(Web3.HTTPProvider(rpc_url))
-            if web3.is_connected():
-                cleanup_resources.web3 = web3  # Store for cleanup
-                return web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+            if not web3.is_connected():
+                logger.warning(f"Failed to connect to RPC {rpc_url}")
+                continue
+                
+            cleanup_resources.web3 = web3  # Store for cleanup
+            contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+            if contract is None:
+                raise Exception("Failed to create contract instance")
+            return contract
+            
         except Exception as e:
+            logger.warning(f"Attempt {attempt + 1}/{max_retries} failed with RPC {rpc_url}: {str(e)}")
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 retry_delay *= 2
             else:
-                raise e
+                logger.error("All RPC attempts failed")
+                raise Exception(f"Failed to connect to any RPC after {max_retries} attempts")
 
 def is_token_minted(token_id):
     """Check if a token is minted by querying the owner."""
     try:
         contract = get_web3_contract()
-        owner = contract.functions.ownerOf(token_id).call()
-        return True
+        if contract is None:
+            logger.error(f"Failed to get contract for token {token_id}")
+            return False
+            
+        try:
+            owner = contract.functions.ownerOf(token_id).call()
+            return True
+        except Exception as e:
+            if "ERC721: invalid token ID" in str(e):
+                logger.info(f"Token {token_id} is not minted")
+                return False
+            else:
+                logger.error(f"Error checking owner for token {token_id}: {e}")
+                return False
     except Exception as e:
         logger.error(f"Error checking token {token_id}: {e}")
         return False
