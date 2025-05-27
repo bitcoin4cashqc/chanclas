@@ -2,7 +2,7 @@ import multiprocessing
 import os
 
 # Server socket
-bind = "127.0.0.1:3000"  # Changed to localhost only
+bind = "0.0.0.0:3000"  # Listen on all interfaces
 backlog = 1024
 
 # Worker processes
