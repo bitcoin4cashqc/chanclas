@@ -14,6 +14,7 @@ import resource
 import signal
 from functools import wraps
 import tempfile
+import ssl
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -61,22 +62,24 @@ CONTRACT_ADDRESS = "0x262cA2E567315300CDdf389A0D2E37212F4DAEF4"  # Contract addr
 
 # RPC URLs ordered by speed (fastest first)
 RPC_URLS = [
-    "http://base-rpc.publicnode.com", 
-    "http://base-mainnet.public.blastapi.io",  
-    "http://base.blockpi.network/v1/rpc/public",
-    "http://developer-access-mainnet.base.org",  
-    "http://mainnet.base.org",  
-    "http://base-pokt.nodies.app", 
-    "http://base.lava.build",  
-    "http://base.api.onfinality.io/public", 
-    "http://endpoints.omniatech.io/v1/base/mainnet/public", 
-    "http://base.meowrpc.com",  
-    "http://rpc.therpc.io/base", 
-    "http://rpc.owlracle.info/base/70d38ce1826c4a60bb2a8e05a6c8b20f", 
-    "http://base.drpc.org", 
-    "http://base.rpc.subquery.network/public",  
-    "http://base.llamarpc.com", 
-    "http://api.zan.top/base-mainnet", 
+    "wss://0xrpc.io/base",  # WebSocket endpoint first
+    "https://base-rpc.publicnode.com", 
+    "https://base-mainnet.public.blastapi.io",  
+    "https://base.blockpi.network/v1/rpc/public",
+    "https://developer-access-mainnet.base.org",  
+    "https://mainnet.base.org",  
+    "https://base-pokt.nodies.app", 
+    "https://base.lava.build",  
+    "https://base.api.onfinality.io/public", 
+    "https://endpoints.omniatech.io/v1/base/mainnet/public", 
+    "https://0xrpc.io/base", 
+    "https://base.meowrpc.com",  
+    "https://rpc.therpc.io/base", 
+    "https://rpc.owlracle.info/base/70d38ce1826c4a60bb2a8e05a6c8b20f", 
+    "https://base.drpc.org", 
+    "https://base.rpc.subquery.network/public",  
+    "https://base.llamarpc.com", 
+    "https://api.zan.top/base-mainnet", 
 ]
 
 def cleanup_resources():
@@ -118,31 +121,31 @@ def get_web3_contract():
             rpc_url = get_next_rpc()
             logger.info(f"Attempting to connect to RPC: {rpc_url}")
             
-            # Configure Web3 with proper timeout and retry settings
-            provider = Web3.HTTPProvider(
-                rpc_url,
-                request_kwargs={
-                    'timeout': 10,  # 10 second timeout
-                    'headers': {
-                        'Content-Type': 'application/json',
+            # Configure Web3 based on URL type
+            if rpc_url.startswith('wss://'):
+                provider = Web3.WebsocketProvider(
+                    rpc_url,
+                    websocket_kwargs={
+                        'timeout': 30,
+                        'sslopt': {"cert_reqs": ssl.CERT_NONE}
                     }
-                }
-            )
+                )
+            else:
+                provider = Web3.HTTPProvider(
+                    rpc_url,
+                    request_kwargs={
+                        'timeout': 30,
+                        'verify': False,
+                        'headers': {
+                            'Content-Type': 'application/json',
+                        }
+                    }
+                )
+            
             web3 = Web3(provider)
             
-            # Test connection with a simple call
             if not web3.is_connected():
                 logger.warning(f"Failed to connect to RPC {rpc_url}")
-                continue
-                
-            # Test if we can get the chain ID
-            try:
-                chain_id = web3.eth.chain_id
-                if chain_id != 8453:  # Base mainnet chain ID
-                    logger.warning(f"Wrong chain ID {chain_id} for RPC {rpc_url}")
-                    continue
-            except Exception as e:
-                logger.warning(f"Failed to get chain ID from RPC {rpc_url}: {e}")
                 continue
                 
             cleanup_resources.web3 = web3  # Store for cleanup
