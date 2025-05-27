@@ -86,7 +86,12 @@ def cleanup_resources():
     """Clean up resources after request"""
     gc.collect()
     if hasattr(cleanup_resources, 'web3'):
-        del cleanup_resources.web3
+        try:
+            if cleanup_resources.web3:
+                cleanup_resources.web3 = None
+        except:
+            pass
+    gc.collect()
 
 def memory_monitor():
     """Monitor memory usage"""
@@ -113,8 +118,11 @@ with open("Chanclas_ABI.json", "r") as f:
 
 def get_web3_contract():
     """Get a new Web3 contract instance with retry logic."""
-    max_retries = len(RPC_URLS)
+    max_retries = 3  # Reduced number of retries
     retry_delay = 1
+    
+    # Clean up any existing Web3 instance
+    cleanup_resources()
     
     for attempt in range(max_retries):
         try:
@@ -126,7 +134,7 @@ def get_web3_contract():
                 provider = Web3.WebsocketProvider(
                     rpc_url,
                     websocket_kwargs={
-                        'timeout': 30,
+                        'timeout': 10,  # Reduced timeout
                         'sslopt': {"cert_reqs": ssl.CERT_NONE}
                     }
                 )
@@ -134,7 +142,7 @@ def get_web3_contract():
                 provider = Web3.HTTPProvider(
                     rpc_url,
                     request_kwargs={
-                        'timeout': 30,
+                        'timeout': 10,  # Reduced timeout
                         'verify': False,
                         'headers': {
                             'Content-Type': 'application/json',
@@ -148,7 +156,10 @@ def get_web3_contract():
                 logger.warning(f"Failed to connect to RPC {rpc_url}")
                 continue
                 
-            cleanup_resources.web3 = web3  # Store for cleanup
+            # Store for cleanup
+            cleanup_resources.web3 = web3
+            
+            # Create contract instance
             contract = web3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
             if contract is None:
                 raise Exception("Failed to create contract instance")
@@ -158,6 +169,8 @@ def get_web3_contract():
             
         except Exception as e:
             logger.warning(f"Attempt {attempt + 1}/{max_retries} failed with RPC {rpc_url}: {str(e)}")
+            # Clean up on error
+            cleanup_resources()
             if attempt < max_retries - 1:
                 time.sleep(retry_delay)
                 retry_delay *= 2
@@ -186,6 +199,9 @@ def is_token_minted(token_id):
     except Exception as e:
         logger.error(f"Error checking token {token_id}: {e}")
         return False
+    finally:
+        # Always clean up after checking
+        cleanup_resources()
 
 # @app.before_request
 # def log_resources():

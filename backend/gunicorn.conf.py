@@ -3,15 +3,15 @@ import os
 
 # Server socket
 bind = "0.0.0.0:3000"  # Listen on all interfaces
-backlog = 1024
+backlog = 2048
 
 # Worker processes
-workers = 2  # Keep it at 2 for 1 vCPU
+workers = 1  # Reduced to 1 worker
 worker_class = "gthread"
 threads = 2
-worker_connections = 500
-timeout = 120  # Increased timeout for image generation
-keepalive = 5
+worker_connections = 1000
+timeout = 30
+keepalive = 2
 
 # Process naming
 proc_name = "chanclas_api"
