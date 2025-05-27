@@ -51,4 +51,19 @@ echo "  screen -r cloudflared # For cloudflared tunnel"
 if [ -f /tmp/backend_error.log ]; then
     echo -e "\nBackend error log:"
     cat /tmp/backend_error.log
-fi 
+fi
+
+# Keep the script running and monitor the sessions
+while true; do
+    sleep 30
+    if ! screen -list | grep -q "backend" || ! screen -list | grep -q "cloudflared"; then
+        echo "One or more screen sessions died, restarting..."
+        # Restart the dead sessions
+        if ! screen -list | grep -q "backend"; then
+            start_screen_session "backend" "cd $PROJECT_DIR/backend && source venv/bin/activate && gunicorn -c gunicorn.conf.py api:app"
+        fi
+        if ! screen -list | grep -q "cloudflared"; then
+            start_screen_session "cloudflared" "cd $PROJECT_DIR && cloudflared tunnel run chanclas"
+        fi
+    fi
+done 
