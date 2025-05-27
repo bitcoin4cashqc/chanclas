@@ -14,7 +14,7 @@ start_screen_session() {
 }
 
 # Start gunicorn screen session
-start_screen_session "backend" "cd ./backend/ && gunicorn -c gunicorn.conf.py api:app"
+start_screen_session "backend" "cd ~/chanclas/backend/ && gunicorn -c gunicorn.conf.py api:app"
 
 # Start cloudflared screen session
 start_screen_session "cloudflared" "cloudflared tunnel run chanclas"
