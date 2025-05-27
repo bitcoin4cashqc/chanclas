@@ -7,7 +7,7 @@ start_screen_session() {
     
     if ! screen -list | grep -q "$session_name"; then
         # Try to create the screen session
-        if screen -dmS "$session_name" bash -c "$command"; then
+        if screen -dmS "$session_name" bash -c "$command 2>&1 | tee /tmp/${session_name}_error.log"; then
             # Wait a moment to ensure the session is created
             sleep 1
             # Verify the session exists
@@ -15,6 +15,7 @@ start_screen_session() {
                 echo "✅ Started $session_name screen session"
             else
                 echo "❌ Failed to start $session_name screen session"
+                echo "Check error log: /tmp/${session_name}_error.log"
                 return 1
             fi
         else
@@ -31,7 +32,8 @@ PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Start gunicorn screen session
 echo "Starting backend service..."
-start_screen_session "backend" "cd $PROJECT_DIR/backend && gunicorn -c gunicorn.conf.py api:app"
+echo "Using project directory: $PROJECT_DIR"
+start_screen_session "backend" "cd $PROJECT_DIR/backend && echo 'Current directory: \$(pwd)' && echo 'Checking gunicorn.conf.py exists: \$(ls -l gunicorn.conf.py)' && gunicorn -c gunicorn.conf.py api:app"
 
 # Start cloudflared screen session
 echo "Starting cloudflared service..."
@@ -43,4 +45,10 @@ screen -ls
 
 echo -e "\nTo attach to a screen session:"
 echo "  screen -r backend    # For backend service"
-echo "  screen -r cloudflared # For cloudflared tunnel" 
+echo "  screen -r cloudflared # For cloudflared tunnel"
+
+# If backend failed, show the error log
+if [ -f /tmp/backend_error.log ]; then
+    echo -e "\nBackend error log:"
+    cat /tmp/backend_error.log
+fi 
