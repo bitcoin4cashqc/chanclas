@@ -179,8 +179,6 @@ def get_nft_metadata(token_id):
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
 
-        
-
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
             try:
@@ -227,8 +225,6 @@ def get_nft_image(token_id):
         # Check if the token is minted
         if not is_token_minted(token_id):
             return jsonify({"error": f"Token {token_id} is not minted"}), 404
-
-        
 
         # Generate image if missing
         if not os.path.exists(image_path):
