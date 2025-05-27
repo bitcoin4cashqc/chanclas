@@ -2,7 +2,7 @@ import multiprocessing
 import os
 
 # Server socket
-bind = "0.0.0.0:3000"
+bind = "127.0.0.1:3000"  # Changed to localhost only
 backlog = 1024
 
 # Worker processes
@@ -10,7 +10,7 @@ workers = 2  # Keep it at 2 for 1 vCPU
 worker_class = "gthread"
 threads = 2
 worker_connections = 500
-timeout = 60
+timeout = 120  # Increased timeout for image generation
 keepalive = 5
 
 # Process naming
