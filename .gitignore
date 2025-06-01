@@ -7,3 +7,4 @@ solidity/node_modules
 solidity/build
 .venv
 venv
+startup.log
