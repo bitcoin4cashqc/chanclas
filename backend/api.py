@@ -11,6 +11,7 @@ from redis.exceptions import RedisError
 import time
 import tempfile
 from functools import wraps
+import requests  # Add requests for OpenSea API calls
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -120,6 +121,34 @@ def is_token_minted(token_id):
 #     process = psutil.Process(os.getpid())
 #     app.logger.info(f"Memory usage: {process.memory_info().rss / 1024 / 1024:.2f} MB")
 
+def refresh_opensea_metadata(token_id):
+    """Refresh metadata on OpenSea for a specific token."""
+    try:
+        url = f"https://api.opensea.io/api/v2/chain/base/contract/{CONTRACT_ADDRESS}/nfts/{token_id}/refresh"
+        headers = {
+            'x-api-key': '164a9bc6683142c68001fb234c856ee2'
+        }
+        
+        logger.info(f"Attempting to refresh OpenSea metadata for token {token_id}")
+        response = requests.post(url, headers=headers, timeout=10)
+        
+        if response.status_code == 200:
+            logger.info(f"Successfully refreshed OpenSea metadata for token {token_id}")
+            return True
+        elif response.status_code == 429:
+            logger.warning(f"OpenSea rate limit hit for token {token_id}, but request was queued")
+            return True
+        else:
+            logger.warning(f"OpenSea refresh failed for token {token_id}: Status {response.status_code}, Response: {response.text}")
+            return False
+            
+    except requests.exceptions.Timeout:
+        logger.warning(f"OpenSea refresh timed out for token {token_id}")
+        return False
+    except Exception as e:
+        logger.error(f"Error refreshing OpenSea metadata for token {token_id}: {e}")
+        return False
+
 @app.route("/id/<int:token_id>", methods=["GET"])
 #@limiter.limit("60 per minute")
 def get_nft_metadata(token_id):
@@ -149,11 +178,17 @@ def get_nft_metadata(token_id):
         # Generate metadata if missing
         if not os.path.exists(metadata_path):
             try:
+                logger.info(f"Generating new image and metadata for token {token_id}")
                 # Query the blockchain for token data
                 contract = get_web3_contract()
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+                
+                # Refresh OpenSea metadata after generating NEW image
+                logger.info(f"New image generated for token {token_id}, triggering OpenSea refresh")
+                refresh_opensea_metadata(token_id)
+                
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate metadata"}), 500
@@ -195,11 +230,17 @@ def get_nft_image(token_id):
         # Generate image if missing
         if not os.path.exists(image_path):
             try:
+                logger.info(f"Generating new image for token {token_id}")
                 # Query the blockchain for token data
                 contract = get_web3_contract()
                 token_data = contract.functions.getTokenData(token_id).call()
                 seed, period_id, extraMints, curveSteepness, maxRebate = token_data
                 generate_image(token_id, period_id, seed, extraMints, curveSteepness, maxRebate, OUTPUT_DIR)
+                
+                # Refresh OpenSea metadata after generating NEW image
+                logger.info(f"New image generated for token {token_id}, triggering OpenSea refresh")
+                refresh_opensea_metadata(token_id)
+                
             except Exception as e:
                 logger.error(f"Error generating image for token {token_id}: {e}")
                 return jsonify({"error": "Failed to generate image"}), 500

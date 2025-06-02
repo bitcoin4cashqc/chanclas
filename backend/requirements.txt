@@ -9,3 +9,4 @@ Flask-Limiter
 Flask-Limiter[redis]
 psutil
 redis
+requests
