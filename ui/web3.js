@@ -61,20 +61,14 @@ async function readFromContract({ address, abi, functionName, args = [], account
 
 async function writeToContract({ address, abi, functionName, args = [], account }) {
   const { hash } = await writeContract({ address, abi, functionName, args, account });
-  await waitForTransaction({ hash });
-  return hash;
-}
-
-/** Get transaction receipt using wagmi's publicClient */
-async function getTransactionReceipt(hash) {
-  return await publicClient.getTransactionReceipt({ hash });
+  const receipt = await waitForTransaction({ hash });
+  return { hash, receipt };
 }
 
 /** Extract token ID from mint transaction receipt */
-async function extractTokenIdFromMintTransaction(txHash) {
+async function extractTokenIdFromMintTransaction(receipt) {
   try {
-    console.log('Getting transaction receipt for hash:', txHash);
-    const receipt = await getTransactionReceipt(txHash);
+    console.log('Parsing transaction receipt for logs:', receipt);
     
     if (!receipt || !receipt.logs) {
       throw new Error('No logs found in transaction receipt');
@@ -185,7 +179,6 @@ export {
   getAccount,
   readFromContract,
   writeToContract,
-  getTransactionReceipt,
   extractTokenIdFromMintTransaction,
   signNonce,
   backend_api,

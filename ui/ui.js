@@ -160,7 +160,7 @@ approveBtn.addEventListener('click', async () => {
   const amount = BigInt(mintAmount.value * 1e6); // USDC has 6 decimals
   
   try {
-    await writeToContract({
+    const { hash } = await writeToContract({
       address: usdcbase,
       abi: erc20Abi,
       functionName: 'approve',
@@ -196,7 +196,7 @@ async function queryBackendAfterMint(tokenId) {
 mintBtn.addEventListener('click', async () => {
   
   try {
-    const txHash = await writeToContract({
+    const { hash: txHash, receipt } = await writeToContract({
       address: ico,
       abi: ICOAbi,
       functionName: 'mint',
@@ -206,9 +206,9 @@ mintBtn.addEventListener('click', async () => {
     
     console.log('Mint transaction hash:', txHash);
     
-    // Extract token ID from transaction using wagmi infrastructure
+    // Extract token ID from transaction receipt using wagmi infrastructure
     try {
-      const tokenId = await extractTokenIdFromMintTransaction(txHash);
+      const tokenId = await extractTokenIdFromMintTransaction(receipt);
       
       // Query backend to generate metadata and trigger OpenSea refresh
       await queryBackendAfterMint(tokenId);
