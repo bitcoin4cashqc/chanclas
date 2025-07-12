@@ -61,8 +61,40 @@ async function readFromContract({ address, abi, functionName, args = [], account
 
 async function writeToContract({ address, abi, functionName, args = [], account }) {
   const { hash } = await writeContract({ address, abi, functionName, args, account });
-  await waitForTransaction({ hash });
-  return hash;
+  const receipt = await waitForTransaction({ hash });
+  return { hash, receipt };
+}
+
+/** Extract token ID from mint transaction receipt */
+async function extractTokenIdFromMintTransaction(receipt) {
+  try {
+    console.log('Parsing transaction receipt for logs:', receipt);
+    
+    if (!receipt || !receipt.logs) {
+      throw new Error('No logs found in transaction receipt');
+    }
+    
+    console.log('Transaction receipt logs:', receipt.logs);
+    
+    // Look for the Minted event
+    // The Minted event has signature: Minted(address indexed buyer, uint256 indexed tokenId, uint256 periodId, uint256 price)
+    // The topic for Minted event (keccak256 of the event signature)
+    const mintedEventTopic = '0x5a3358a3d27a5373c0df2604662088d37894d56b7cfd27f315770440f4e0d919';
+    
+    for (const log of receipt.logs) {
+      if (log.topics && log.topics[0] === mintedEventTopic) {
+        // tokenId is the second indexed parameter (topics[2])
+        const tokenId = parseInt(log.topics[2], 16);
+        console.log(`Found minted token ID: ${tokenId}`);
+        return tokenId;
+      }
+    }
+    
+    throw new Error('Minted event not found in transaction logs');
+  } catch (error) {
+    console.error('Error extracting token ID from transaction:', error);
+    throw error;
+  }
 }
 
 /**
@@ -147,6 +179,7 @@ export {
   getAccount,
   readFromContract,
   writeToContract,
+  extractTokenIdFromMintTransaction,
   signNonce,
   backend_api,
   formatWeiToEth,

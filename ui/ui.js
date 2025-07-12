@@ -12,6 +12,7 @@ import {
   getAccount,
   readFromContract,
   writeToContract,
+  extractTokenIdFromMintTransaction,
   signNonce,
   backend_api,
   formatWeiToEth,
@@ -159,7 +160,7 @@ approveBtn.addEventListener('click', async () => {
   const amount = BigInt(mintAmount.value * 1e6); // USDC has 6 decimals
   
   try {
-    await writeToContract({
+    const { hash } = await writeToContract({
       address: usdcbase,
       abi: erc20Abi,
       functionName: 'approve',
@@ -172,17 +173,51 @@ approveBtn.addEventListener('click', async () => {
   }
 });
 
+// Function to query backend after minting
+async function queryBackendAfterMint(tokenId) {
+  try {
+    console.log(`Querying backend for token ${tokenId}...`);
+    
+    // Query the metadata endpoint to trigger generation and OpenSea refresh
+    const response = await fetch(`${backend_api}id/${tokenId}`);
+    
+    if (response.ok) {
+      const metadata = await response.json();
+      console.log(`Successfully generated metadata for token ${tokenId}:`, metadata);
+    } else {
+      console.error(`Backend query failed for token ${tokenId}:`, response.status, response.statusText);
+    }
+  } catch (error) {
+    console.error(`Error querying backend for token ${tokenId}:`, error);
+  }
+}
+
 // Mint handler
 mintBtn.addEventListener('click', async () => {
   
   try {
-    await writeToContract({
+    const { hash: txHash, receipt } = await writeToContract({
       address: ico,
       abi: ICOAbi,
       functionName: 'mint',
       args: [],
       account
     });
+    
+    console.log('Mint transaction hash:', txHash);
+    
+    // Extract token ID from transaction receipt using wagmi infrastructure
+    try {
+      const tokenId = await extractTokenIdFromMintTransaction(receipt);
+      
+      // Query backend to generate metadata and trigger OpenSea refresh
+      await queryBackendAfterMint(tokenId);
+      
+    } catch (extractError) {
+      console.error('Failed to extract token ID or query backend:', extractError);
+      // Continue with normal flow even if backend query fails
+    }
+    
     await updateMintData();
   } catch (error) {
     console.error('Minting failed:', error);
