@@ -25,7 +25,8 @@ directories = {
 
 # Function to load rarities based on period
 def load_rarities(period):
-    with open(f"./rarities/rarities_{period}.json", "r") as f:
+    #bypassing for now
+    with open(f"./rarities/rarities_4.json", "r") as f:
         return json.load(f)
     
 # Function to verify if files exist
